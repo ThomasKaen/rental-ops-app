@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  api:
+    build: ./backend
+    environment:
+      - DATABASE_URL=sqlite:///./app.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/app.db:/app/app.db
+  web:
+    build: ./frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - api
