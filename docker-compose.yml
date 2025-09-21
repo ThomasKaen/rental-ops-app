@@ -8,13 +8,13 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
-      - ./backend/app.db:/app/app.db
+      - ./backend/data:/app/data
   web:
     build: ./frontend
     environment:
       - VITE_API_URL=http://localhost:8000
     ports:
-      - "5173:5173"
+      - "5173:80"
     volumes:
       - ./frontend:/app
     depends_on:

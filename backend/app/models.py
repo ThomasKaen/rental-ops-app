@@ -1,14 +1,33 @@
+# backend/app/models.py
 from datetime import datetime
-from typing import Optional, Literal
-from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional
+from enum import Enum
+from sqlmodel import SQLModel, Field
 
+class Priority(str, Enum):
+    red = "red"
+    amber = "amber"
+    green = "green"
+
+class Status(str, Enum):
+    new = "new"
+    in_progress = "in_progress"
+    awaiting_parts = "awaiting_parts"
+    blocked = "blocked"
+    done = "done"
+    cancelled = "cancelled"
+
+class MovementReason(str, Enum):
+    usage = "usage"
+    delivery = "delivery"
+    adjustment = "adjustment"
+    transfer = "transfer"
 
 class Site(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     address: Optional[str] = None
     notes: Optional[str] = None
-
 
 class Unit(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -17,20 +36,18 @@ class Unit(SQLModel, table=True):
     floor: Optional[str] = None
     notes: Optional[str] = None
 
-
 class Task(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     site_id: int = Field(foreign_key="site.id")
     unit_id: Optional[int] = Field(default=None, foreign_key="unit.id")
     title: str
     description: str
-    priority: Literal["red", "amber", "green"] = "green"
-    status: Literal["new","in_progress","awaiting_parts","blocked","done","cancelled"] = "new"
+    priority: Priority = Field(default=Priority.green)
+    status: Status = Field(default=Status.new)
     assignee: Optional[str] = None
     due_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
 
 class InventoryItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -41,7 +58,6 @@ class InventoryItem(SQLModel, table=True):
     notes: Optional[str] = None
     min_level_default: int = 0
 
-
 class InventoryStock(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     site_id: int = Field(foreign_key="site.id")
@@ -50,12 +66,11 @@ class InventoryStock(SQLModel, table=True):
     min_level_override: Optional[int] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-
 class StockMovement(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     stock_id: int = Field(foreign_key="inventorystock.id")
     delta_qty: int
-    reason: Literal["usage", "delivery", "adjustment", "transfer"] = "usage"
+    reason: MovementReason = Field(default=MovementReason.usage)
     reference: Optional[str] = None
     author: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
