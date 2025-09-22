@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from pathlib import Path
 from typing import List
+from pydantic import BaseModel
 from ..db import get_session
 from ..models import Task, TaskComment, TaskAttachment
 
@@ -65,3 +66,28 @@ def list_attachments(task_id: int, session: Session = Depends(get_session)):
         raise HTTPException(404, "Task not found")
     q = select(TaskAttachment).where(TaskAttachment.task_id == task_id).order_by(TaskAttachment.uploaded_at)
     return session.exec(q).all()
+
+# --- Comments update & delete ---
+
+class CommentUpdate(BaseModel):
+    body: str
+    author: str | None = None
+
+@router.patch("/{task_id}/comments/{comment_id}", response_model=TaskComment)
+def update_comment(task_id: int, comment_id: int, payload: CommentUpdate, session: Session = Depends(get_session)):
+    c = session.get(TaskComment, comment_id)
+    if not c or c.task_id != task_id:
+        raise HTTPException(404, "Comment not found")
+    c.body = payload.body
+    if payload.author is not None:
+        c.author = payload.author
+    session.add(c); session.commit(); session.refresh(c)
+    return c
+
+@router.delete("/{task_id}/comments/{comment_id}", status_code=204)
+def delete_comment(task_id: int, comment_id: int, session: Session = Depends(get_session)):
+    c = session.get(TaskComment, comment_id)
+    if not c or c.task_id != task_id:
+        raise HTTPException(404, "Comment not found")
+    session.delete(c); session.commit()
+    return

@@ -11,6 +11,9 @@ export default function Comments({ taskId }:{ taskId:number }) {
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editBody, setEditBody] = useState('')
+
   const load = async () => {
     const [c, a] = await Promise.all([
       api.get(`/tasks/${taskId}/comments`),
@@ -18,11 +21,11 @@ export default function Comments({ taskId }:{ taskId:number }) {
     ])
     setComments(c.data); setAttachments(a.data)
   }
-
   useEffect(()=>{ load() }, [taskId])
 
-  const submit = async () => {
+  const submitNew = async () => {
     if (busy) return
+    if (!body.trim() && !file) return
     setBusy(true)
     try {
       if (body.trim()) {
@@ -39,9 +42,30 @@ export default function Comments({ taskId }:{ taskId:number }) {
         setFile(null)
       }
       await load()
-    } finally {
-      setBusy(false)
-    }
+    } finally { setBusy(false) }
+  }
+
+  const startEdit = (c: Comment) => {
+    setEditId(c.id)
+    setEditBody(c.body)
+  }
+
+  const saveEdit = async (id: number) => {
+    if (!editBody.trim()) return
+    await api.patch(`/tasks/${taskId}/comments/${id}`, { body: editBody, author: 'web' })
+    setEditId(null); setEditBody('')
+    await load()
+  }
+
+  const cancelEdit = () => {
+    setEditId(null)
+    setEditBody('')
+  }
+
+  const del = async (id: number) => {
+    if (!confirm('Delete this comment?')) return
+    await api.delete(`/tasks/${taskId}/comments/${id}`)
+    await load()
   }
 
   return (
@@ -49,21 +73,64 @@ export default function Comments({ taskId }:{ taskId:number }) {
       <h4>Activity</h4>
 
       <div style={{ display:'grid', gap:8 }}>
-        {comments.map(c => (
-          <div key={c.id} style={{ padding:8, border:'1px solid #eee', borderRadius:8 }}>
-            <div style={{ fontSize:12, color:'#666' }}>{c.author || 'anon'} · {new Date(c.created_at).toLocaleString()}</div>
-            <div>{c.body}</div>
-          </div>
-        ))}
+        {comments.map(c => {
+          const isEditing = editId === c.id
+          return (
+            <div key={c.id} style={{ position:'relative', padding:8, border:'1px solid #eee', borderRadius:8 }}>
+              <div style={{ fontSize:12, color:'#666', marginBottom:6 }}>
+                {c.author || 'anon'} · {new Date(c.created_at).toLocaleString()}
+              </div>
+
+              {!isEditing ? (
+                <div>{c.body}</div>
+              ) : (
+                <div style={{ display:'grid', gap:6 }}>
+                  <textarea value={editBody} onChange={e=>setEditBody(e.target.value)} />
+                  <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                    <button onClick={cancelEdit}>Cancel</button>
+                    <button onClick={()=>saveEdit(c.id)} disabled={!editBody.trim()}>Save</button>
+                  </div>
+                </div>
+              )}
+
+              {/* bottom-right action buttons */}
+              {!isEditing && (
+                <div style={{ position:'absolute', right:8, bottom:8, display:'flex', gap:8 }}>
+                  <button title="Edit" onClick={()=>startEdit(c)}
+                          style={{ border:'1px solid #ddd', background:'#fafafa', borderRadius:6, padding:'2px 6px' }}>
+                    {/* note/pencil icon */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                  </button>
+                  <button title="Delete" onClick={()=>del(c.id)}
+                          style={{ border:'1px solid #ddd', background:'#fafafa', borderRadius:6, padding:'2px 6px' }}>
+                    {/* bin icon */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-1 0v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V6h10z"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+
         {attachments.length > 0 && (
           <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
-            {attachments.map(a => (
-              <a key={a.id} href={a.url} target="_blank" rel="noreferrer" style={{ border:'1px solid #eee', padding:4, borderRadius:6 }}>
-                {a.filename}
-              </a>
-            ))}
+            {attachments.map(a => {
+              const apiBase = (api.defaults.baseURL as string).replace(/\/+$/, '')
+              const href = a.url.startsWith('http') ? a.url : `${apiBase}${a.url}`
+              return (
+                <a key={a.id} href={href} target="_blank" rel="noreferrer"
+                   style={{ border:'1px solid #eee', padding:4, borderRadius:6 }}>
+                  {a.filename}
+                </a>
+              )
+            })}
           </div>
         )}
+
         {comments.length===0 && attachments.length===0 && <div>No activity yet.</div>}
       </div>
 
@@ -71,7 +138,7 @@ export default function Comments({ taskId }:{ taskId:number }) {
         <textarea placeholder="Add a comment" value={body} onChange={e=>setBody(e.target.value)} />
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <input type="file" onChange={e=>setFile(e.target.files?.[0] || null)} />
-          <button onClick={submit} disabled={busy || (!body.trim() && !file)}>
+          <button onClick={submitNew} disabled={busy || (!body.trim() && !file)}>
             {busy ? 'Posting…' : 'Post'}
           </button>
         </div>
