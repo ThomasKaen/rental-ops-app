@@ -4,12 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.1.0 Project skeleton - Docker build fixes">
-      <change afterPath="$PROJECT_DIR$/seed.ps1" afterDir="false" />
+    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.1.0 seed file for test - run .\seed.ps1 in terminal">
+      <change afterPath="$PROJECT_DIR$/backend/app/routers/task_io.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/src/components/Comments.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/src/components/NewTaskModal.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/lib/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/TaskDetail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TaskDetail.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,9 +23,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="HTML File" />
         <option value="Dockerfile" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -93,12 +97,21 @@
       <option name="project" value="LOCAL" />
       <updated>1758469036141</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="v0.1.0 seed file for test - run .\seed.ps1 in terminal">
+      <option name="closed" value="true" />
+      <created>1758472613229</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1758472613229</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="v0.1.0 Project skeleton" />
     <MESSAGE value="v0.1.0 Project skeleton - Docker build fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="v0.1.0 Project skeleton - Docker build fixes" />
+    <MESSAGE value="v0.1.0 seed file for test - run .\seed.ps1 in terminal" />
+    <option name="LAST_COMMIT_MESSAGE" value="v0.1.0 seed file for test - run .\seed.ps1 in terminal" />
   </component>
 </project>

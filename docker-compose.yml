@@ -9,6 +9,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
   web:
     build: ./frontend
     environment:

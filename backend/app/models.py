@@ -49,6 +49,20 @@ class Task(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+class TaskComment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    task_id: int = Field(foreign_key="task.id")
+    author: Optional[str] = None
+    body: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class TaskAttachment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    task_id: int = Field(foreign_key="task.id")
+    filename: str
+    url: str     # e.g. /uploads/123_photo.jpg
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+
 class InventoryItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     sku: str
