@@ -10,7 +10,16 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 @router.get("")
-def list_tasks(site_id: int | None = None, priority: str | None = None, status: str | None = None, q: str | None = None, session: Session = Depends(get_session)):
+def list_tasks(
+    site_id: int | None = None,
+    priority: str | None = None,
+    status: str | None = None,
+    assignee: str | None = None,
+    overdue: bool | None = None,
+    q: str | None = None,
+    session: Session = Depends(get_session),
+):
+    from ..models import Task  # ensure Task is imported
     statement = select(Task)
     if site_id:
         statement = statement.where(Task.site_id == site_id)
@@ -18,9 +27,19 @@ def list_tasks(site_id: int | None = None, priority: str | None = None, status: 
         statement = statement.where(Task.priority == priority)
     if status:
         statement = statement.where(Task.status == status)
+    if assignee is not None and assignee != "":
+        statement = statement.where(Task.assignee == assignee)
     if q:
         like = f"%{q}%"
         statement = statement.where((Task.title.like(like)) | (Task.description.like(like)))
+    if overdue:
+        # overdue = due_at in past AND not done/cancelled
+        from datetime import datetime
+        statement = statement.where(
+            Task.due_at.is_not(None),
+            Task.due_at < datetime.utcnow(),
+            Task.status.not_in(["done", "cancelled"]),
+        )
     return session.exec(statement.order_by(Task.created_at.desc())).all()
 
 @router.post("")

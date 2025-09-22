@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import api from '../lib/api'
+import { localToISO } from '../lib/datetime'
+
+
+
 
 export default function NewTaskModal({
   open, onClose, onCreated,
@@ -11,6 +15,7 @@ export default function NewTaskModal({
   const [priority, setPriority] = useState<'red' | 'amber' | 'green'>('green')
   const [submitting, setSubmitting] = useState(false)
   const canSubmit = title.trim().length > 0 && description.trim().length > 0
+  const [dueLocal, setDueLocal] = useState<string>('') // datetime-local control
 
   if (!open) return null
 
@@ -24,11 +29,15 @@ export default function NewTaskModal({
         title,
         description,
         priority,
+        due_at: localToISO(dueLocal) || undefined,
       })
       onCreated()
       onClose()
-      setTitle(''); setDescription(''); setUnitId('')
-      setPriority('green')
+      setTitle('');
+      setDescription('');
+      setUnitId('');
+      setPriority('green');
+      setDueLocal('')
     } finally {
       setSubmitting(false)
     }
@@ -61,6 +70,14 @@ export default function NewTaskModal({
               <option value="amber">Amber</option>
               <option value="green">Green</option>
             </select>
+          </label>
+          <label>Due date (optional)
+            <input
+                type="datetime-local"
+                value={dueLocal}
+                onChange={e => setDueLocal(e.target.value)}
+                style={{ width: '100%' }}
+            />
           </label>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
             <button onClick={onClose} disabled={submitting}>Cancel</button>

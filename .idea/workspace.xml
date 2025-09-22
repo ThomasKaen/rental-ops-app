@@ -4,10 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.1.0 Tasks - add, comments">
+    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.1.0 Tasks - comments - edit, delete">
+      <change afterPath="$PROJECT_DIR$/frontend/nginx.conf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/src/lib/datetime.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/routers/task_io.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/task_io.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/Comments.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Comments.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/NewTaskModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/NewTaskModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/lib/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/TaskDetail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TaskDetail.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +114,15 @@
       <option name="project" value="LOCAL" />
       <updated>1758538544588</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="v0.1.0 Tasks - comments - edit, delete">
+      <option name="closed" value="true" />
+      <created>1758538827505</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1758538827505</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -115,6 +130,7 @@
     <MESSAGE value="v0.1.0 Project skeleton - Docker build fixes" />
     <MESSAGE value="v0.1.0 seed file for test - run .\seed.ps1 in terminal" />
     <MESSAGE value="v0.1.0 Tasks - add, comments" />
-    <option name="LAST_COMMIT_MESSAGE" value="v0.1.0 Tasks - add, comments" />
+    <MESSAGE value="v0.1.0 Tasks - comments - edit, delete" />
+    <option name="LAST_COMMIT_MESSAGE" value="v0.1.0 Tasks - comments - edit, delete" />
   </component>
 </project>

@@ -1,9 +1,12 @@
 import axios from "axios";
 
-const baseURL =
-  (window as any).__CONFIG__?.API_URL ||          // runtime override (see step 3)
-  import.meta.env.VITE_API_URL ||                 // compile-time (Vite)
-  `${location.protocol}//${location.hostname}:8000`;  // fallback for local
+/** Robust base URL detection */
+const runtime = (window as any).__CONFIG__?.API_URL;
+const vite = (import.meta as any).env?.VITE_API_URL;
+const fallback = `${location.protocol}//${location.hostname}:8000`;
 
+const baseURL = (runtime || vite || fallback).replace(/\/+$/, "");
 console.log("[API baseURL]", baseURL);
-export default axios.create({ baseURL });
+
+const api = axios.create({ baseURL });
+export default api;
