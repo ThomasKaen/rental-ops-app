@@ -15,7 +15,7 @@ A lightweight task + inventory management system with FastAPI (backend) and Reac
 - **Runtime:** Docker / Docker Compose.
 
 ## 🛠 Development
-```bash
+- bash
 docker compose up --build
 
 The API runs at http://localhost:8000.
