@@ -1,9 +1,11 @@
 version: "3.9"
 services:
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=sqlite:///./app.db
+      DATABASE_URL: "sqlite:////app/data/app.db"
     ports:
       - "8000:8000"
     volumes:

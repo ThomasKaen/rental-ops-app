@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Optional, Literal
 from pydantic import BaseModel
+from datetime import datetime
+from sqlmodel import SQLModel
+from .models import Priority, Status
 
 
 class SiteCreate(BaseModel):
@@ -22,15 +25,29 @@ class UnitCreate(BaseModel):
     notes: Optional[str] = None
 
 
-class TaskCreate(BaseModel):
+class TaskCreate(SQLModel):
     site_id: int
     unit_id: Optional[int] = None
     title: str
     description: str
-    priority: Literal["red","amber","green"] = "green"
+    priority: Priority = Priority.green
+    status: Status = Status.new
     assignee: Optional[str] = None
-    due_at: Optional[datetime] = None
+    due_at: Optional[datetime] = None  # client may send ISO string; we coerce
 
+class TaskUpdate(SQLModel):
+    site_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[Priority] = None
+    status: Optional[Status] = None
+    assignee: Optional[str] = None
+    due_at: Optional[datetime] = None  # allow clearing with null
+
+class CommentCreate(SQLModel):
+    author: Optional[str] = None
+    body: str
 
 class TaskPatch(BaseModel):
     status: Optional[Literal["new","in_progress","awaiting_parts","blocked","done","cancelled"]] = None

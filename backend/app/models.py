@@ -63,6 +63,7 @@ class TaskAttachment(SQLModel, table=True):
     url: str     # e.g. /uploads/123_photo.jpg
     uploaded_at: datetime = Field(default_factory=datetime.utcnow)
 
+
 class InventoryItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     sku: str

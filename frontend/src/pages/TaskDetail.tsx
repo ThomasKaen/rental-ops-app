@@ -34,6 +34,11 @@ export default function TaskDetail(){
     await api.patch(`/tasks/${id}`, { assignee: assignee || null })
     await load()
   }
+  async function deleteTask() {
+  if (!confirm("Delete this task?")) return
+  await api.delete(`/tasks/${id}`)
+  window.location.href = "/tasks"   // go back to list
+  }
 
   return (
     <div style={{ paddingBottom:80 }}>
@@ -79,7 +84,9 @@ export default function TaskDetail(){
         <button onClick={()=>update('awaiting_parts')}>Awaiting parts</button>
         <button onClick={()=>update('done')}>Done</button>
       </div>
-
+        <button onClick={deleteTask} style={{ color: "#b91c1c" }}>
+            Delete Task
+        </button>
       <Comments taskId={Number(id)} />
     </div>
   )
