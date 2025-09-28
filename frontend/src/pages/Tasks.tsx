@@ -15,48 +15,80 @@ export default function Tasks(){
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  // filters
+  // filters (simple)
   const [priority, setPriority] = useState<string>('')     // '', 'red', 'amber', 'green'
   const [status, setStatus] = useState<string>('')         // '', 'new', ...
   const [assignee, setAssignee] = useState<string>('')     // exact match
-  const [siteId, setSiteId]   = useState<string>('')       // optional number
   const [overdue, setOverdue] = useState<boolean>(false)
   const [q, setQ] = useState<string>('')
 
+  // site/unit filters
+  const [sites, setSites] = useState<{id:number;name:string}[]>([])
+  const [units, setUnits] = useState<{id:number;site_id:number;name:string}[]>([])
+  const [siteId, setSiteId] = useState<number | ''>('')   // <-- single source of truth
+  const [unitId, setUnitId] = useState<number | ''>('')
+
+  // build query string
   const qs = useMemo(() => {
     const p = new URLSearchParams()
     if (priority) p.set('priority', priority)
     if (status) p.set('status', status)
     if (assignee) p.set('assignee', assignee)
-    if (siteId) p.set('site_id', siteId)
+    if (siteId !== '') p.set('site_id', String(siteId))
+    if (unitId !== '') p.set('unit_id', String(unitId))
     if (overdue) p.set('overdue', 'true')
     if (q) p.set('q', q)
     const s = p.toString()
     return s ? `?${s}` : ''
-  }, [priority, status, assignee, siteId, overdue, q])
+  }, [priority, status, assignee, siteId, unitId, overdue, q])
 
   const load = async () => {
     setLoading(true); setErr(null)
     try {
       const r = await api.get('/tasks' + qs)
       setTasks(r.data)
-    } catch (e:any) { setErr(e?.message || 'Failed to load tasks') }
-    finally { setLoading(false) }
+    } catch (e:any) {
+      setErr(e?.message || 'Failed to load tasks')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(()=>{ load() }, [qs])
+
+  // load sites once
+  useEffect(() => {
+    (async () => {
+      const r = await api.get("/sites")
+      setSites(r.data)
+    })()
+  }, [])
+
+  // when site changes, load units (and clear unit filter if site cleared)
+  useEffect(() => {
+    (async () => {
+      if (siteId !== '') {
+        const r = await api.get(`/sites/${siteId}/units`)
+        setUnits(r.data)
+      } else {
+        setUnits([])
+        setUnitId('')
+      }
+    })()
+  }, [siteId])
 
   return (
     <div>
       {/* Filters */}
       <div style={{ display:'grid', gap:8, marginBottom:12 }}>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
           <select value={priority} onChange={e=>setPriority(e.target.value)}>
             <option value="">Priority (all)</option>
             <option value="red">Red</option>
             <option value="amber">Amber</option>
             <option value="green">Green</option>
           </select>
+
           <select value={status} onChange={e=>setStatus(e.target.value)}>
             <option value="">Status (all)</option>
             <option value="new">New</option>
@@ -66,20 +98,46 @@ export default function Tasks(){
             <option value="done">Done</option>
             <option value="cancelled">Cancelled</option>
           </select>
+
           <input placeholder="Assignee" value={assignee} onChange={e=>setAssignee(e.target.value)} />
-          <input placeholder="Site ID" value={siteId} onChange={e=>setSiteId(e.target.value)} style={{ width:100 }} />
+
+          {/* Site + Unit selectors */}
+          <select
+            value={String(siteId)}
+            onChange={e => setSiteId(e.target.value ? Number(e.target.value) : '')}
+          >
+            <option value="">All sites</option>
+            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+
+          <select
+            value={String(unitId)}
+            onChange={e => setUnitId(e.target.value ? Number(e.target.value) : '')}
+            disabled={siteId === ''}
+          >
+            <option value="">{siteId === '' ? "Select site first" : "All units"}</option>
+            {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+
           <label style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
             <input type="checkbox" checked={overdue} onChange={e=>setOverdue(e.target.checked)} />
             Overdue
           </label>
+
           <input placeholder="Search title/desc" value={q} onChange={e=>setQ(e.target.value)} style={{ flex:1, minWidth:160 }} />
+
           <div style={{ marginLeft:'auto' }}>
             <button onClick={()=>setOpen(true)}>+ New Task</button>
           </div>
         </div>
-        {(priority||status||assignee||siteId||overdue||q) && (
+
+        {(priority||status||assignee||(siteId!=='')||(unitId!=='')||overdue||q) && (
           <div>
-            <button onClick={() => { setPriority(''); setStatus(''); setAssignee(''); setSiteId(''); setOverdue(false); setQ('') }}>
+            <button onClick={() => {
+              setPriority(''); setStatus(''); setAssignee('');
+              setSiteId(''); setUnitId('');
+              setOverdue(false); setQ('');
+            }}>
               Clear filters
             </button>
           </div>
