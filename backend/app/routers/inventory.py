@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
+# app/routers/inventory.py
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from sqlmodel import Session, select
 from ..db import get_session
@@ -19,20 +20,24 @@ def create_item(item: InventoryItem, session: Session = Depends(get_session)):
 def update_item(item_id: int, data: InventoryItem, session: Session = Depends(get_session)):
     it = session.get(InventoryItem, item_id)
     if not it: raise HTTPException(404, "Item not found")
-    for k, v in data.model_dump(exclude_unset=True).items():
-        setattr(it, k, v)
+    for k,v in data.model_dump(exclude_unset=True).items(): setattr(it,k,v)
     session.add(it); session.commit(); session.refresh(it); return it
 
-# Site stock
+@router.delete("/items/{item_id}")
+def delete_item(item_id: int, session: Session = Depends(get_session)):
+    it = session.get(InventoryItem, item_id)
+    if not it: raise HTTPException(404, "Item not found")
+    session.delete(it); session.commit(); return {"ok": True}
+
+# Stock
 @router.get("/stock", response_model=List[InventoryStock])
 def list_stock(site_id: int, session: Session = Depends(get_session)):
-    return session.exec(select(InventoryStock).where(InventoryStock.site_id == site_id)).all()
+    return session.exec(select(InventoryStock).where(InventoryStock.site_id==site_id)).all()
 
 @router.post("/stock/upsert", response_model=InventoryStock)
 def upsert_stock(stock: InventoryStock, session: Session = Depends(get_session)):
-    # Upsert by (site_id, item_id)
     row = session.exec(select(InventoryStock).where(
-        (InventoryStock.site_id == stock.site_id) & (InventoryStock.item_id == stock.item_id)
+        (InventoryStock.site_id==stock.site_id) & (InventoryStock.item_id==stock.item_id)
     )).first()
     if row:
         if stock.quantity is not None: row.quantity = stock.quantity
@@ -40,11 +45,10 @@ def upsert_stock(stock: InventoryStock, session: Session = Depends(get_session))
         session.add(row); session.commit(); session.refresh(row); return row
     session.add(stock); session.commit(); session.refresh(stock); return stock
 
-# Movements
 @router.post("/stock/{stock_id}/move", response_model=StockMovement)
-def add_movement(stock_id: int, delta: int, reason: MovementReason = MovementReason.usage,
-                 reference: str | None = None, author: str | None = None,
-                 session: Session = Depends(get_session)):
+def move_stock(stock_id: int, delta: int, reason: MovementReason = MovementReason.usage,
+               reference: str | None = None, author: str | None = None,
+               session: Session = Depends(get_session)):
     st = session.get(InventoryStock, stock_id)
     if not st: raise HTTPException(404, "Stock not found")
     st.quantity = (st.quantity or 0) + delta

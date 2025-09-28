@@ -1,27 +1,26 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link } from "react-router-dom";
+import Sites from "./pages/Sites";
+import Inventory from "./pages/Inventory";
+import Tasks from "./pages/Tasks";
+import TaskDetail from "./pages/TaskDetail";
 
-
-export default function App(){
-    const { pathname } = useLocation()
-    return (
-        <div style={{ fontFamily: 'system-ui, sans-serif' }}>
-            <div style={{ padding: 12, borderBottom: '1px solid #eee' }}>
-                <strong>Airbnb Ops</strong>
-            </div>
-            <div style={{ padding: 12 }}>
-                <Outlet />
-            </div>
-            <nav style={{ position:'fixed', bottom:0, left:0, right:0, display:'flex', gap:8, borderTop:'1px solid #eee', padding:8, background:'#fff' }}>
-                <Tab to="/" label="Home" active={pathname === '/'} />
-                <Tab to="/tasks" label="Tasks" active={pathname.startsWith('/tasks')} />
-                <Tab to="/inventory" label="Inventory" active={pathname.startsWith('/inventory')} />
-                <Tab to="/sites" label="Sites" active={pathname.startsWith('/sites')} />
-            </nav>
-        </div>
-    )
-}
-
-
-function Tab({ to, label, active }:{to:string; label:string; active:boolean}){
-    return <Link to={to} style={{ flex:1, textAlign:'center', padding:8, borderRadius:8, background: active? '#efefef':'transparent', textDecoration:'none', color:'#111' }}>{label}</Link>
+export default function App() {
+  return (
+    <div>
+      <nav style={{ display: "flex", gap: 12, padding: 8, borderBottom: "1px solid #eee" }}>
+        <Link to="/tasks">Tasks</Link>
+        <Link to="/sites">Sites</Link>
+        <Link to="/inventory">Inventory</Link>
+      </nav>
+      <div style={{ padding: 12 }}>
+        <Routes>
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/tasks/:id" element={<TaskDetail />} />
+          <Route path="/sites" element={<Sites />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="*" element={<Tasks />} />
+        </Routes>
+      </div>
+    </div>
+  );
 }
