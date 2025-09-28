@@ -1,3 +1,7 @@
+# Rental Ops App
+
+**A full-stack task and inventory tracker for rental operations, built with FastAPI, React, and Docker.**
+
 # Inventory & Task Tracker (v0.1.0)
 
 A lightweight task + inventory management system with FastAPI (backend) and React/TypeScript (frontend).
@@ -15,19 +19,19 @@ A lightweight task + inventory management system with FastAPI (backend) and Reac
 - **Runtime:** Docker / Docker Compose.
 
 ## 🛠 Development
-```bash
+- bash
 docker compose up --build
 
 The API runs at http://localhost:8000.
 Frontend runs at http://localhost:3000 (if using web service with Node).
 
-Database
+# Database
 
 Default: sqlite:////app/data/app.db (mounted at ./backend/data/app.db).
 
 Do not run docker compose down -v unless you want to erase all data.
 
-🔮 Roadmap
+## 🔮 Roadmap
 
 v0.2.0: Sites & Units CRUD, Inventory stock & movements.
 
@@ -35,7 +39,7 @@ v0.3.0: Authentication, notifications, UX polish.
 
 v1.0.0: Postgres + Alembic migrations, deployment-ready.
 
-📜 License
+## 📜 License
 
 Licensed under the Prosperity Public License
  — same model as NAS File Organizer project.
