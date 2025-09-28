@@ -1,3 +1,7 @@
+# Rental Ops App
+
+**A full-stack task and inventory tracker for rental operations, built with FastAPI, React, and Docker.**
+
 # Inventory & Task Tracker (v0.1.0)
 
 A lightweight task + inventory management system with FastAPI (backend) and React/TypeScript (frontend).
