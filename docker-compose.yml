@@ -22,3 +22,15 @@ services:
       - ./frontend:/app
     depends_on:
       - api
+  web-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules

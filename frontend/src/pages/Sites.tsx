@@ -4,6 +4,44 @@ import api from "../lib/api";
 type Site = { id: number; name: string; address?: string | null; notes?: string | null };
 type Unit = { id: number; site_id: number; name: string; floor?: string | null; notes?: string | null };
 
+// State + Helpers
+type TaskLite = {
+  id: number;
+  status: "new" | "in_progress" | "awaiting_parts" | "blocked" | "done" | "cancelled";
+  due_at?: string | null;
+};
+
+type SiteCounts = {
+  new: number;
+  in_progress: number;
+  awaiting_parts: number;
+  blocked: number;
+  done: number;
+  cancelled: number;
+  overdue: number;
+};
+
+const EMPTY_COUNTS: SiteCounts = {
+  new: 0, in_progress: 0, awaiting_parts: 0, blocked: 0, done: 0, cancelled: 0, overdue: 0,
+};
+
+function computeCounts(tasks: TaskLite[]): SiteCounts {
+  const c: SiteCounts = { ...EMPTY_COUNTS };
+  const now = Date.now();
+  for (const t of tasks) {
+    c[t.status] = (c[t.status] ?? 0) + 1;
+    if (
+      t.due_at &&
+      t.status !== "done" &&
+      t.status !== "cancelled" &&
+      new Date(t.due_at).getTime() < now
+    ) {
+      c.overdue++;
+    }
+  }
+  return c;
+}
+
 export default function Sites() {
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(false);
@@ -19,27 +57,58 @@ export default function Sites() {
   // new unit
   const [newUnitName, setNewUnitName] = useState("");
 
+  // State
+  const [counts, setCounts] = useState<Record<number, SiteCounts>>({});
+  const [countsLoading, setCountsLoading] = useState(false);
+
   const filtered = useMemo(() => {
     const k = q.trim().toLowerCase();
     if (!k) return sites;
     return sites.filter(s => s.name.toLowerCase().includes(k) || (s.address ?? "").toLowerCase().includes(k));
   }, [sites, q]);
 
-  const loadSites = async () => {
-    setLoading(true); setErr(null);
-    try {
-      const r = await api.get("/sites");
-      setSites(r.data);
-      // refresh units for selected if any
-      if (selected) {
-        const s = r.data.find((x: Site) => x.id === selected.id);
-        if (!s) { setSelected(null); setUnits([]); }
-        else await loadUnits(s.id);
+  const loadCountsForSites = async (list: Site[]) => {
+  setCountsLoading(true);
+  try {
+    // Fetch all sites in parallel; tolerant of failures
+    const results = await Promise.allSettled(
+      list.map(async (s) => {
+        const r = await api.get(`/tasks?site_id=${s.id}`);
+        const c = computeCounts(r.data as TaskLite[]);
+        return [s.id, c] as const;
+      })
+    );
+    const next: Record<number, SiteCounts> = {};
+    for (const res of results) {
+      if (res.status === "fulfilled") {
+        const [id, c] = res.value;
+        next[id] = c;
       }
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load sites");
-    } finally { setLoading(false); }
-  };
+    }
+    setCounts((prev) => ({ ...prev, ...next }));
+  } finally {
+    setCountsLoading(false);
+  }
+};
+
+const loadSites = async () => {
+  setLoading(true); setErr(null);
+  try {
+    const r = await api.get("/sites");
+    setSites(r.data);
+    await loadCountsForSites(r.data);   // ← add this line
+    if (selected) {
+      const s = r.data.find((x: Site) => x.id === selected.id);
+      if (!s) { setSelected(null); setUnits([]); }
+      else await loadUnits(s.id);
+    }
+  } catch (e: any) {
+    setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load sites");
+  } finally { setLoading(false); }
+};
+
+
+
 
   const loadUnits = async (siteId: number) => {
     try {
@@ -110,24 +179,102 @@ export default function Sites() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {/* Sites list */}
         <div>
-          {filtered.map(s => (
-            <div key={s.id}
-                 style={{ border: "1px solid #eee", borderRadius: 8, padding: 10, marginBottom: 8, background: selected?.id === s.id ? "#f8fafc" : "#fff" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{s.name}</div>
-                  <div style={{ fontSize: 12, color: "#555" }}>{s.address || "—"}</div>
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => selectSite(s)}>Open</button>
-                  <button onClick={() => startEditSite(s)}>Edit</button>
-                  <button onClick={() => deleteSite(s.id)} style={{ color: "#b91c1c" }}>Delete</button>
-                </div>
-              </div>
-            </div>
-          ))}
+          {filtered.map((s) => (
+  <div
+    key={s.id}
+    style={{
+      border: "1px solid #eee",
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 8,
+      background: selected?.id === s.id ? "#f8fafc" : "#fff",
+    }}
+  >
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+      <div>
+        <div style={{ fontWeight: 600 }}>{s.name}</div>
+        <div style={{ fontSize: 12, color: "#555" }}>{s.address || "—"}</div>
+
+        {/* 🔹 Task counts badges must be INSIDE the map, so 's' is defined */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+          {(() => {
+            const c = counts[s.id] ?? EMPTY_COUNTS;
+            const badge = (
+              label: string,
+              value: number,
+              href: string,
+              style?: React.CSSProperties
+            ) => (
+              <a
+                key={label}
+                href={href}
+                style={{
+                  padding: "2px 8px",
+                  borderRadius: 999,
+                  border: "1px solid #e5e7eb",
+                  fontSize: 12,
+                  textDecoration: "none",
+                  color: "#111",
+                  background: "#fff",
+                  ...(style || {}),
+                }}
+                title={`${label}: ${value}`}
+              >
+                {label}: {value}
+              </a>
+            );
+
+            return (
+              <>
+                {badge("New", c.new, `/tasks?site_id=${s.id}&status=new`)}
+                {badge(
+                  "In-progress",
+                  c.in_progress,
+                  `/tasks?site_id=${s.id}&status=in_progress`
+                )}
+                {badge(
+                  "Awaiting",
+                  c.awaiting_parts,
+                  `/tasks?site_id=${s.id}&status=awaiting_parts`
+                )}
+                {badge("Blocked", c.blocked, `/tasks?site_id=${s.id}&status=blocked`)}
+                {badge("Done", c.done, `/tasks?site_id=${s.id}&status=done`)}
+                {badge(
+                  "Overdue",
+                  c.overdue,
+                  `/tasks?site_id=${s.id}&overdue=true`,
+                  c.overdue > 0
+                    ? {
+                        borderColor: "#fecaca",
+                        background: "#fff1f2",
+                        color: "#991b1b",
+                      }
+                    : {}
+                )}
+              </>
+            );
+          })()}
+          {countsLoading && (
+            <span style={{ fontSize: 12, color: "#555" }}>Loading…</span>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 6 }}>
+        <button onClick={() => selectSite(s)}>Open</button>
+        <button onClick={() => startEditSite(s)}>Edit</button>
+        <button onClick={() => deleteSite(s.id)} style={{ color: "#b91c1c" }}>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+))}
+
           {filtered.length === 0 && !loading && <div>No sites.</div>}
         </div>
+
+
 
         {/* Units panel */}
         <div>

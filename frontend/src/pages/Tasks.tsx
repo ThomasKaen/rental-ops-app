@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import api from '../lib/api'
 import NewTaskModal from '../components/NewTaskModal'
 
@@ -7,6 +7,29 @@ type Task = {
   id:number; title:string; priority:'red'|'amber'|'green';
   status:'new'|'in_progress'|'awaiting_parts'|'blocked'|'done'|'cancelled';
   assignee?: string; due_at?: string | null
+}
+
+const STATUS_OPTIONS = [
+  "new",
+  "in_progress",
+  "awaiting_parts",
+  "blocked",
+  "done",
+  "cancelled",
+] as const;
+type StatusVal = (typeof STATUS_OPTIONS)[number];
+
+function chipStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: "6px 10px",
+    borderRadius: 999,
+    border: "1px solid",
+    borderColor: active ? "#2563eb" : "#e5e7eb",
+    background: active ? "#eff6ff" : "#fff",
+    color: active ? "#1d4ed8" : "#111",
+    cursor: "pointer",
+    fontSize: 13,
+  };
 }
 
 export default function Tasks(){
@@ -27,6 +50,15 @@ export default function Tasks(){
   const [units, setUnits] = useState<{id:number;site_id:number;name:string}[]>([])
   const [siteId, setSiteId] = useState<number | ''>('')   // <-- single source of truth
   const [unitId, setUnitId] = useState<number | ''>('')
+
+  const statusCounts = useMemo(() => {
+  const counts: Record<string, number> = {};
+  for (const s of STATUS_OPTIONS) counts[s] = 0;
+  for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
+  return counts;
+  }, [tasks]);
+
+  const location = useLocation();
 
   // build query string
   const qs = useMemo(() => {
@@ -89,15 +121,29 @@ export default function Tasks(){
             <option value="green">Green</option>
           </select>
 
-          <select value={status} onChange={e=>setStatus(e.target.value)}>
-            <option value="">Status (all)</option>
-            <option value="new">New</option>
-            <option value="in_progress">In progress</option>
-            <option value="awaiting_parts">Awaiting parts</option>
-            <option value="blocked">Blocked</option>
-            <option value="done">Done</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+          {/* Status chips */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => setStatus('')}
+            style={chipStyle(status === '')}
+            title="Show all statuses"
+          >
+            All
+          </button>
+
+          {STATUS_OPTIONS.map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatus(s)}
+              style={chipStyle(status === s)}
+              title={s.replace('_', ' ')}
+            >
+              {s.replace('_',' ')} ({statusCounts[s]})
+            </button>
+          ))}
+        </div>
 
           <input placeholder="Assignee" value={assignee} onChange={e=>setAssignee(e.target.value)} />
 
@@ -149,7 +195,7 @@ export default function Tasks(){
       {!loading && tasks.length === 0 && <div>No tasks match.</div>}
 
       {tasks.map(t=> (
-        <Link key={t.id} to={`/tasks/${t.id}`} style={{ display:'block', padding:12, border:'1px solid #eee', borderRadius:8, marginBottom:8, textDecoration:'none', color:'#111' }}>
+        <Link key={t.id} to={`/tasks/${t.id}`} state={{ from: location.pathname + location.search }} style={{ display:'block', padding:12, border:'1px solid #eee', borderRadius:8, marginBottom:8, textDecoration:'none', color:'#111' }}>
           <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
             <div style={{ fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
               <span style={{

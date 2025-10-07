@@ -1,0 +1,12 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy manifests
+COPY package.json ./
+# Copy lockfile if it exists; ignore if it doesn't
+COPY package-lock.json* ./
+
+# Use ci when lockfile exists, otherwise install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# Source will be bind-mounted by docker-compose; don't copy it here
