@@ -4,24 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.2.0 - complete">
-      <change afterPath="$PROJECT_DIR$/docker-compose.dev.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/button.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/card.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/dialog.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/input.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/label.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/textarea.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/ui/use-toast.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/Dockerfile.dev" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/Dockerfile.dev" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Inventory.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Inventory.tsx" afterDir="false" />
+    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.2.0 - UI polish">
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Sites.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Sites.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/vite.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/vite.config.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -178,7 +162,15 @@
       <option name="project" value="LOCAL" />
       <updated>1759848162465</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="v0.2.0 - UI polish">
+      <option name="closed" value="true" />
+      <created>1760189679679</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1760189679679</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -191,6 +183,7 @@
     <MESSAGE value="v0.1.0 - Complete, Documentation - Complete" />
     <MESSAGE value="v0.2.0 - Sites + Inventory base" />
     <MESSAGE value="v0.2.0 - complete" />
-    <option name="LAST_COMMIT_MESSAGE" value="v0.2.0 - complete" />
+    <MESSAGE value="v0.2.0 - UI polish" />
+    <option name="LAST_COMMIT_MESSAGE" value="v0.2.0 - UI polish" />
   </component>
 </project>
