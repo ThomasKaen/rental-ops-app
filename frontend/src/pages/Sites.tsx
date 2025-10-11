@@ -1,328 +1,220 @@
+// src/pages/Sites.tsx
 import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 
-type Site = { id: number; name: string; address?: string | null; notes?: string | null };
-type Unit = { id: number; site_id: number; name: string; floor?: string | null; notes?: string | null };
-
-// State + Helpers
-type TaskLite = {
+type Site = {
   id: number;
-  status: "new" | "in_progress" | "awaiting_parts" | "blocked" | "done" | "cancelled";
-  due_at?: string | null;
+  name: string;
+  address?: string | null;
+  notes?: string | null;
+  units?: number | null;
 };
 
-type SiteCounts = {
-  new: number;
-  in_progress: number;
-  awaiting_parts: number;
-  blocked: number;
-  done: number;
-  cancelled: number;
-  overdue: number;
-};
-
-const EMPTY_COUNTS: SiteCounts = {
-  new: 0, in_progress: 0, awaiting_parts: 0, blocked: 0, done: 0, cancelled: 0, overdue: 0,
-};
-
-function computeCounts(tasks: TaskLite[]): SiteCounts {
-  const c: SiteCounts = { ...EMPTY_COUNTS };
-  const now = Date.now();
-  for (const t of tasks) {
-    c[t.status] = (c[t.status] ?? 0) + 1;
-    if (
-      t.due_at &&
-      t.status !== "done" &&
-      t.status !== "cancelled" &&
-      new Date(t.due_at).getTime() < now
-    ) {
-      c.overdue++;
-    }
-  }
-  return c;
-}
-
-export default function Sites() {
+export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<Site | null>(null);
-  const [units, setUnits] = useState<Unit[]>([]);
+  // modal state
+  const [editing, setEditing] = useState<Partial<Site> | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Site | null>(null);
 
-  // new/edit site
-  const [editingSite, setEditingSite] = useState<Partial<Site> | null>(null);
+  // ---- data ----
+  const loadSites = async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      // NOTE: trailing slash avoids 307 redirect in FastAPI (@router.get("/"))
+      const r = await api.get<Site[]>("/sites/");
+      setSites(r.data);
+    } catch (e: any) {
+      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load sites");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // new unit
-  const [newUnitName, setNewUnitName] = useState("");
-
-  // State
-  const [counts, setCounts] = useState<Record<number, SiteCounts>>({});
-  const [countsLoading, setCountsLoading] = useState(false);
+  useEffect(() => {
+    // IMPORTANT: no dependencies here — run once
+    loadSites();
+  }, []);
 
   const filtered = useMemo(() => {
-    const k = q.trim().toLowerCase();
-    if (!k) return sites;
-    return sites.filter(s => s.name.toLowerCase().includes(k) || (s.address ?? "").toLowerCase().includes(k));
-  }, [sites, q]);
-
-  const loadCountsForSites = async (list: Site[]) => {
-  setCountsLoading(true);
-  try {
-    // Fetch all sites in parallel; tolerant of failures
-    const results = await Promise.allSettled(
-      list.map(async (s) => {
-        const r = await api.get(`/tasks?site_id=${s.id}`);
-        const c = computeCounts(r.data as TaskLite[]);
-        return [s.id, c] as const;
-      })
+    const t = q.trim().toLowerCase();
+    if (!t) return sites;
+    return sites.filter((s) =>
+      [s.name, s.address ?? "", s.notes ?? ""].some((v) => v.toLowerCase().includes(t))
     );
-    const next: Record<number, SiteCounts> = {};
-    for (const res of results) {
-      if (res.status === "fulfilled") {
-        const [id, c] = res.value;
-        next[id] = c;
-      }
-    }
-    setCounts((prev) => ({ ...prev, ...next }));
-  } finally {
-    setCountsLoading(false);
-  }
-};
+  }, [q, sites]);
 
-const loadSites = async () => {
-  setLoading(true); setErr(null);
-  try {
-    const r = await api.get("/sites");
-    setSites(r.data);
-    await loadCountsForSites(r.data);   // ← add this line
-    if (selected) {
-      const s = r.data.find((x: Site) => x.id === selected.id);
-      if (!s) { setSelected(null); setUnits([]); }
-      else await loadUnits(s.id);
-    }
-  } catch (e: any) {
-    setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load sites");
-  } finally { setLoading(false); }
-};
-
-
-
-
-  const loadUnits = async (siteId: number) => {
-    try {
-      const r = await api.get(`/sites/${siteId}/units`);
-      setUnits(r.data);
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load units");
-    }
-  };
-
-  useEffect(() => { loadSites(); /* eslint-disable-next-line */ }, []);
-
-  const startCreateSite = () => setEditingSite({ name: "", address: "", notes: "" });
-  const startEditSite = (s: Site) => setEditingSite({ ...s });
+  // ---- CRUD helpers ----
+  const startNew = () => setEditing({ name: "", address: "", notes: "", units: null });
+  const startEdit = (s: Site) => setEditing({ ...s });
 
   const saveSite = async () => {
-    if (!editingSite?.name?.trim()) return;
-    try {
-      if (editingSite.id) {
-        await api.put(`/sites/${editingSite.id}`, {
-          name: editingSite.name,
-          address: editingSite.address ?? null,
-          notes: editingSite.notes ?? null,
-        });
-      } else {
-        await api.post(`/sites`, {
-          name: editingSite.name,
-          address: editingSite.address ?? null,
-          notes: editingSite.notes ?? null,
-        });
-      }
-      setEditingSite(null);
-      await loadSites();
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to save site");
+    if (!editing?.name?.trim()) return;
+    const payload = {
+      name: editing.name?.trim() ?? "",
+      address: (editing.address ?? "").toString().trim() || null,
+      notes: (editing.notes ?? "").toString().trim() || null,
+      units: editing.units === null || editing.units === undefined ? null : Number(editing.units),
+    };
+    if (editing.id) {
+      await api.put(`/sites/${editing.id}`, payload);
+    } else {
+      await api.post(`/sites/`, payload); // trailing slash
     }
-  };
-
-  const deleteSite = async (id: number) => {
-    if (!confirm("Delete this site?")) return;
-    await api.delete(`/sites/${id}`);
-    if (selected?.id === id) { setSelected(null); setUnits([]); }
+    setEditing(null);
     await loadSites();
   };
 
-  const selectSite = async (s: Site) => {
-    setSelected(s);
-    await loadUnits(s.id);
+  const deleteSite = async (s: Site) => {
+    if (!confirm(`Delete "${s.name}"?`)) return;
+    await api.delete(`/sites/${s.id}`);
+    await loadSites();
   };
 
-  const addUnit = async () => {
-    if (!selected || !newUnitName.trim()) return;
-    await api.post(`/sites/${selected.id}/units`, { name: newUnitName });
-    setNewUnitName("");
-    await loadUnits(selected.id);
-  };
-
+  // ---- UI ----
   return (
-    <div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-        <input placeholder="Search sites…" value={q} onChange={e => setQ(e.target.value)} />
-        <button onClick={startCreateSite}>+ New Site</button>
-        {err && <div style={{ color: "#b91c1c", marginLeft: 8 }}>{err}</div>}
-      </div>
-
-      {loading && <div>Loading…</div>}
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {/* Sites list */}
-        <div>
-          {filtered.map((s) => (
-  <div
-    key={s.id}
-    style={{
-      border: "1px solid #eee",
-      borderRadius: 8,
-      padding: 10,
-      marginBottom: 8,
-      background: selected?.id === s.id ? "#f8fafc" : "#fff",
-    }}
-  >
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+    <div style={{ display: "grid", gap: 12 }}>
       <div>
-        <div style={{ fontWeight: 600 }}>{s.name}</div>
-        <div style={{ fontSize: 12, color: "#555" }}>{s.address || "—"}</div>
-
-        {/* 🔹 Task counts badges must be INSIDE the map, so 's' is defined */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-          {(() => {
-            const c = counts[s.id] ?? EMPTY_COUNTS;
-            const badge = (
-              label: string,
-              value: number,
-              href: string,
-              style?: React.CSSProperties
-            ) => (
-              <a
-                key={label}
-                href={href}
-                style={{
-                  padding: "2px 8px",
-                  borderRadius: 999,
-                  border: "1px solid #e5e7eb",
-                  fontSize: 12,
-                  textDecoration: "none",
-                  color: "#111",
-                  background: "#fff",
-                  ...(style || {}),
-                }}
-                title={`${label}: ${value}`}
-              >
-                {label}: {value}
-              </a>
-            );
-
-            return (
-              <>
-                {badge("New", c.new, `/tasks?site_id=${s.id}&status=new`)}
-                {badge(
-                  "In-progress",
-                  c.in_progress,
-                  `/tasks?site_id=${s.id}&status=in_progress`
-                )}
-                {badge(
-                  "Awaiting",
-                  c.awaiting_parts,
-                  `/tasks?site_id=${s.id}&status=awaiting_parts`
-                )}
-                {badge("Blocked", c.blocked, `/tasks?site_id=${s.id}&status=blocked`)}
-                {badge("Done", c.done, `/tasks?site_id=${s.id}&status=done`)}
-                {badge(
-                  "Overdue",
-                  c.overdue,
-                  `/tasks?site_id=${s.id}&overdue=true`,
-                  c.overdue > 0
-                    ? {
-                        borderColor: "#fecaca",
-                        background: "#fff1f2",
-                        color: "#991b1b",
-                      }
-                    : {}
-                )}
-              </>
-            );
-          })()}
-          {countsLoading && (
-            <span style={{ fontSize: 12, color: "#555" }}>Loading…</span>
-          )}
-        </div>
+        <h1 style={{ margin: "16px 0 6px" }}>Sites</h1>
+        <p style={{ color: "#555", marginTop: 0 }}>Manage properties/locations for your rentals.</p>
       </div>
 
-      <div style={{ display: "flex", gap: 6 }}>
-        <button onClick={() => selectSite(s)}>Open</button>
-        <button onClick={() => startEditSite(s)}>Edit</button>
-        <button onClick={() => deleteSite(s.id)} style={{ color: "#b91c1c" }}>
-          Delete
-        </button>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button onClick={startNew}>+ New Site</button>
+        <input
+          placeholder="Search by name, address, or notes…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        {loading && <span>Loading…</span>}
+        {err && <span style={{ color: "#b91c1c" }}>{err}</span>}
       </div>
-    </div>
-  </div>
-))}
 
-          {filtered.length === 0 && !loading && <div>No sites.</div>}
-        </div>
-
-
-
-        {/* Units panel */}
-        <div>
-          {selected ? (
-            <div style={{ border: "1px solid #eee", borderRadius: 8, padding: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <h3 style={{ margin: 0 }}>{selected.name} — Units</h3>
-                <a href={`/tasks?site_id=${selected.id}`}>View tasks for this site →</a>
+      {/* list */}
+      <div style={{ display: "grid", gap: 8 }}>
+        {filtered.map((s) => (
+          <div
+            key={s.id}
+            style={{
+              border: "1px solid #eee",
+              borderRadius: 8,
+              padding: 12,
+              display: "grid",
+              gap: 6,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontWeight: 600 }}>{s.name}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => startEdit(s)}>Edit</button>
+                <button onClick={() => setConfirmDelete(s)} style={{ color: "#b91c1c" }}>
+                  Delete
+                </button>
               </div>
-
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <input placeholder="New unit name" value={newUnitName} onChange={e => setNewUnitName(e.target.value)} />
-                <button onClick={addUnit} disabled={!newUnitName.trim()}>Add Unit</button>
-              </div>
-
-              {units.length === 0 && <div>No units yet.</div>}
-              <ul style={{ margin: 0, paddingLeft: 16 }}>
-                {units.map(u => (
-                  <li key={u.id}>{u.name}{u.floor ? ` · ${u.floor}` : ""}</li>
-                ))}
-              </ul>
             </div>
-          ) : (
-            <div style={{ color: "#555" }}>Select a site to manage its units.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Site modal */}
-      {editingSite && (
-        <div style={modalBackdrop}>
-          <div style={modalCard}>
-            <h3 style={{ marginTop: 0 }}>{editingSite.id ? "Edit Site" : "New Site"}</h3>
-            <div style={{ display: "grid", gap: 8 }}>
-              <input placeholder="Name" value={editingSite.name ?? ""} onChange={e => setEditingSite(s => ({ ...s!, name: e.target.value }))} />
-              <input placeholder="Address" value={editingSite.address ?? ""} onChange={e => setEditingSite(s => ({ ...s!, address: e.target.value }))} />
-              <textarea placeholder="Notes" value={editingSite.notes ?? ""} onChange={e => setEditingSite(s => ({ ...s!, notes: e.target.value }))} />
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
-              <button onClick={() => setEditingSite(null)}>Cancel</button>
-              <button onClick={saveSite} disabled={!editingSite.name?.trim()}>Save</button>
-            </div>
+            {s.address && <div style={{ color: "#555" }}>{s.address}</div>}
+            <div style={{ color: "#777", fontSize: 12 }}>Units: {s.units ?? "–"}</div>
+            {s.notes && <div style={{ color: "#444" }}>{s.notes}</div>}
           </div>
-        </div>
+        ))}
+        {!loading && filtered.length === 0 && <div>No sites yet.</div>}
+      </div>
+
+      {/* create/edit modal */}
+      {editing && (
+        <Modal title={editing.id ? "Edit Site" : "New Site"} onClose={() => setEditing(null)}>
+          <div style={{ display: "grid", gap: 8 }}>
+            <input
+              placeholder="Name"
+              value={editing.name ?? ""}
+              onChange={(e) => setEditing((v) => ({ ...v!, name: e.target.value }))}
+            />
+            <input
+              placeholder="Address"
+              value={editing.address ?? ""}
+              onChange={(e) => setEditing((v) => ({ ...v!, address: e.target.value }))}
+            />
+            <input
+              placeholder="Units (optional, number)"
+              value={editing.units ?? ""}
+              onChange={(e) =>
+                setEditing((v) => ({
+                  ...v!,
+                  units: e.target.value === "" ? null : Number(e.target.value.replace(/[^0-9]/g, "")),
+                }))
+              }
+            />
+            <textarea
+              placeholder="Notes"
+              value={editing.notes ?? ""}
+              onChange={(e) => setEditing((v) => ({ ...v!, notes: e.target.value }))}
+              rows={4}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
+            <button onClick={() => setEditing(null)}>Cancel</button>
+            <button onClick={saveSite} disabled={!editing.name?.trim()}>
+              Save
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* delete confirm modal */}
+      {confirmDelete && (
+        <Modal title="Delete Site" onClose={() => setConfirmDelete(null)}>
+          <div>Delete “{confirmDelete.name}” and all associated data?</div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
+            <button onClick={() => setConfirmDelete(null)}>Cancel</button>
+            <button onClick={() => { deleteSite(confirmDelete); setConfirmDelete(null); }} style={{ color: "#b91c1c" }}>
+              Delete
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );
 }
 
-const modalBackdrop: React.CSSProperties = { position: "fixed", inset: 0, background: "rgba(0,0,0,.2)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
-const modalCard: React.CSSProperties = { background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: 16, width: "min(560px, 96vw)" };
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,.2)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #eee",
+          borderRadius: 10,
+          padding: 16,
+          width: "min(560px, 96vw)",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>{title}</h3>
+        {children}
+      </div>
+    </div>
+  );
+}

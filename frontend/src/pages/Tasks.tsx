@@ -9,14 +9,7 @@ type Task = {
   assignee?: string; due_at?: string | null
 }
 
-const STATUS_OPTIONS = [
-  "new",
-  "in_progress",
-  "awaiting_parts",
-  "blocked",
-  "done",
-  "cancelled",
-] as const;
+const STATUS_OPTIONS = ["new","in_progress","awaiting_parts","blocked","done","cancelled"] as const;
 type StatusVal = (typeof STATUS_OPTIONS)[number];
 
 function chipStyle(active: boolean): React.CSSProperties {
@@ -52,10 +45,10 @@ export default function Tasks(){
   const [unitId, setUnitId] = useState<number | ''>('')
 
   const statusCounts = useMemo(() => {
-  const counts: Record<string, number> = {};
-  for (const s of STATUS_OPTIONS) counts[s] = 0;
-  for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
-  return counts;
+    const counts: Record<string, number> = {};
+    for (const s of STATUS_OPTIONS) counts[s] = 0;
+    for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
+    return counts;
   }, [tasks]);
 
   const location = useLocation();
@@ -88,10 +81,10 @@ export default function Tasks(){
 
   useEffect(()=>{ load() }, [qs])
 
-  // load sites once
+  // load sites once (use trailing slash to avoid 307)
   useEffect(() => {
     (async () => {
-      const r = await api.get("/sites")
+      const r = await api.get("/sites/")
       setSites(r.data)
     })()
   }, [])
@@ -100,7 +93,7 @@ export default function Tasks(){
   useEffect(() => {
     (async () => {
       if (siteId !== '') {
-        const r = await api.get(`/sites/${siteId}/units`)
+        const r = await api.get(`/sites/${siteId}/units/`) // trailing slash
         setUnits(r.data)
       } else {
         setUnits([])
@@ -122,45 +115,24 @@ export default function Tasks(){
           </select>
 
           {/* Status chips */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={() => setStatus('')}
-            style={chipStyle(status === '')}
-            title="Show all statuses"
-          >
-            All
-          </button>
-
-          {STATUS_OPTIONS.map(s => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatus(s)}
-              style={chipStyle(status === s)}
-              title={s.replace('_', ' ')}
-            >
-              {s.replace('_',' ')} ({statusCounts[s]})
-            </button>
-          ))}
-        </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <button type="button" onClick={() => setStatus('')} style={chipStyle(status === '')} title="Show all statuses">All</button>
+            {STATUS_OPTIONS.map(s => (
+              <button key={s} type="button" onClick={() => setStatus(s)} style={chipStyle(status === s)} title={s.replace('_', ' ')}>
+                {s.replace('_',' ')} ({statusCounts[s]})
+              </button>
+            ))}
+          </div>
 
           <input placeholder="Assignee" value={assignee} onChange={e=>setAssignee(e.target.value)} />
 
           {/* Site + Unit selectors */}
-          <select
-            value={String(siteId)}
-            onChange={e => setSiteId(e.target.value ? Number(e.target.value) : '')}
-          >
+          <select value={String(siteId)} onChange={e => setSiteId(e.target.value ? Number(e.target.value) : '')}>
             <option value="">All sites</option>
             {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
 
-          <select
-            value={String(unitId)}
-            onChange={e => setUnitId(e.target.value ? Number(e.target.value) : '')}
-            disabled={siteId === ''}
-          >
+          <select value={String(unitId)} onChange={e => setUnitId(e.target.value ? Number(e.target.value) : '')} disabled={siteId === ''}>
             <option value="">{siteId === '' ? "Select site first" : "All units"}</option>
             {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>

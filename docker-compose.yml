@@ -13,24 +13,25 @@ services:
       - ./backend/data:/app/data
       - ./backend/uploads:/app/uploads
   web:
-    build: ./frontend
-    environment:
-      - VITE_API_URL=http://localhost:8000
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "5173:80"
-    volumes:
-      - ./frontend:/app
+      - "8080:80"
     depends_on:
       - api
   web-dev:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    command: npm run dev -- --host 0.0.0.0 --port 5173
+    command: sh -c "npm ci || npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
       - VITE_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    depends_on:
+      - api

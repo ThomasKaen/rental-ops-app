@@ -1,0 +1,41 @@
+version: "3.9"
+services:
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm ci || npm install && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true # helps on Windows/WSL/docker volumes
+    depends_on:
+      - backend
+
+  backend:
+    # your existing FastAPI service...
+    # example:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rentalops
+      POSTGRES_USER: rentalops
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:

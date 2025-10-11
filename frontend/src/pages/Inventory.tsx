@@ -1,4 +1,3 @@
-// pages/Inventory.tsx
 import { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 
@@ -40,7 +39,7 @@ export default function Inventory() {
     catch (e: any) { setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load items"); }
   };
   const loadSites = async () => {
-    try { const r = await api.get("/sites"); setSites(r.data); }
+    try { const r = await api.get("/sites/"); setSites(r.data); } // NOTE: trailing slash
     catch { /* ignore */ }
   };
   const loadStock = async (sid: number) => {
