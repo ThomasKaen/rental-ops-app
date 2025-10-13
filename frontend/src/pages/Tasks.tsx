@@ -4,7 +4,7 @@ import api from '../lib/api'
 import NewTaskModal from '../components/NewTaskModal'
 
 type Task = {
-  id:number; title:string; priority:'red'|'amber'|'green';
+  id:number; title:string; site?: {id:number; name:string}; unit?: {id:number; name:string}; priority:'red'|'amber'|'green';
   status:'new'|'in_progress'|'awaiting_parts'|'blocked'|'done'|'cancelled';
   assignee?: string; due_at?: string | null
 }

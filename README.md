@@ -1,51 +1,104 @@
 # Rental Ops App
 
-**A full-stack task and inventory tracker for rental operations, built with FastAPI, React, and Docker.**
+**A full-stack property operations tool for managing tasks, sites, units, and inventory.**
 
-# Inventory & Task Tracker (v0.1.0)
+# v0.2.0 — MVP Integration Release
 
-A lightweight task + inventory management system with FastAPI (backend) and React/TypeScript (frontend).
+Rental Ops has reached its first complete operational milestone — you can now manage properties (Sites), their Units, related Tasks, and Inventory in one cohesive workflow.
+
+---
 
 ## ✨ Features
-- Task CRUD (create, edit, assign, due date, delete).
-- Comment system (add, edit, delete).
-- File attachments per task.
-- React frontend with filters, task detail, activity feed.
-- Persistent SQLite database (survives Docker rebuilds).
+
+### 🏠 Sites
+- CRUD with search and metadata (unit count)
+- “Manage Units” deep-link button
+- Clean unified interface
+
+### 🏢 Units
+- Linked directly to Sites (`/sites/{id}/units/`)
+- Create, edit, delete units
+- Bulk Add utility (Unit 1…N)
+- Query param support (`?site_id=123` auto-selects)
+
+### 📋 Tasks
+- CRUD with improved modal
+- Select existing Site + Unit (no manual IDs)
+- Priority, due date, description, validation
+- Readable backend error display
+
+### 📦 Inventory
+- Manage items + stock per Site
+- CRUD for items and quantities
+- Matches unified UI layout
+
+---
+
+## 🧭 Project Structure
+frontend/
+src/pages/
+Sites.tsx
+Units.tsx
+Tasks.tsx
+Inventory.tsx
+backend/
+app/
+routers/
+sites.py
+units.py
+tasks.py
+inventory.py
+docker-compose.yml
+
+yaml
+Copy code
+
+---
 
 ## 🚀 Tech Stack
-- **Backend:** FastAPI + SQLModel + SQLite (dev mode).
-- **Frontend:** React + TypeScript + Vite.
-- **Runtime:** Docker / Docker Compose.
+| Layer | Technology |
+|-------|-------------|
+| **Frontend** | React + TypeScript + Vite |
+| **Backend** | FastAPI + SQLModel |
+| **Database** | SQLite (persistent via Docker volume) |
+| **Infra** | Docker Compose (api + web-dev) |
+
+---
 
 ## 🛠 Development
-- bash
+```bash
 docker compose up --build
+API: http://localhost:8000
 
-The API runs at http://localhost:8000.
-Frontend runs at http://localhost:3000 (if using web service with Node).
+Frontend (dev): http://localhost:5173
 
-# Database
+To rebuild without wiping data, do not use docker compose down -v.
 
-Default: sqlite:////app/data/app.db (mounted at ./backend/data/app.db).
+Database file lives at:
 
-Do not run docker compose down -v unless you want to erase all data.
+bash
+Copy code
+backend/data/app.db
+🔮 Roadmap
+v0.3.0 – Maintenance & Dashboard
 
-## 🔮 Roadmap
+Dashboard KPIs (Sites / Units / Tasks)
 
-v0.2.0: Sites & Units CRUD, Inventory stock & movements.
+Task charts by priority
 
-v0.3.0: Authentication, notifications, UX polish.
+Maintenance schedule templates
 
-v1.0.0: Postgres + Alembic migrations, deployment-ready.
+Toast notifications instead of alerts
 
-## 📜 License
+v1.0.0 – Stable Release
 
+Authentication (JWT)
+
+Postgres + Alembic migrations
+
+Responsive UI + deployment build
+
+📜 License
 Licensed under the Prosperity Public License
- — same model as NAS File Organizer project.
-
-Free for personal & non-commercial use.
-
-Commercial use requires purchasing a license.
-
-After a time/revenue milestone, transitions to open-source.
+(Free for personal/non-commercial use — commercial license required for revenue use.)
+Transitions to open-source after revenue/time milestone.

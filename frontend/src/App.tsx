@@ -1,8 +1,4 @@
-import { Routes, Route, Link } from "react-router-dom";
-import Sites from "./pages/Sites";
-import Inventory from "./pages/Inventory";
-import Tasks from "./pages/Tasks";
-import TaskDetail from "./pages/TaskDetail";
+import { Link, Outlet } from "react-router-dom";
 
 export default function App() {
   return (
@@ -11,15 +7,12 @@ export default function App() {
         <Link to="/tasks">Tasks</Link>
         <Link to="/sites">Sites</Link>
         <Link to="/inventory">Inventory</Link>
+        <Link to="/units">Units</Link>
       </nav>
+
       <div style={{ padding: 12 }}>
-        <Routes>
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/tasks/:id" element={<TaskDetail />} />
-          <Route path="/sites" element={<Sites />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="*" element={<Tasks />} />
-        </Routes>
+        {/* Nested routes render here */}
+        <Outlet />
       </div>
     </div>
   );

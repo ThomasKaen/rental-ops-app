@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 
 type Site = {
@@ -48,11 +49,15 @@ const metaStyle: React.CSSProperties = { color: C.textMuted, fontSize: 12 };
 const btnRow: React.CSSProperties = { display: "flex", gap: 8 };
 const btnDanger: React.CSSProperties = { ...btn, color: C.danger, borderColor: "#fecaca", background: "#fff5f5" };
 
+
+
 export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   // modal state
   const [editing, setEditing] = useState<Partial<Site> | null>(null);
@@ -140,6 +145,7 @@ export default function SitesPage() {
                 <div style={btnRow}>
                   <button onClick={() => startEdit(s)} style={btn}>Edit</button>
                   <button onClick={() => setConfirmDelete(s)} style={btnDanger}>Delete</button>
+                  <button onClick={() => navigate({ pathname: "/units", search: `?site_id=${s.id}` })} style={btn}>Manage units</button>
                 </div>
               </div>
               {s.address && <div style={addrStyle}>{s.address}</div>}
