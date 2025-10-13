@@ -1,5 +1,4 @@
-# backend/app/models.py
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from enum import Enum
 from sqlmodel import SQLModel, Field
@@ -46,22 +45,30 @@ class Task(SQLModel, table=True):
     status: Status = Field(default=Status.new)
     assignee: Optional[str] = None
     due_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    is_recurring: bool = False
+    recurrence: Optional[str] = None  # "daily" | "weekly" | "monthly" | "quarterly" | "yearly"
+    recur_interval: Optional[int] = 1  # every N units (default 1)
+    recur_dow: Optional[int] = None  # 0-6 (if you ever want weekly-on-day)
+    recur_dom: Optional[int] = None  # 1-31 (if you ever want monthly-on-day)
+    recur_until: Optional[datetime] = None
+    last_scheduled_at: Optional[datetime] = None
+    
 class TaskComment(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     task_id: int = Field(foreign_key="task.id")
     author: Optional[str] = None
     body: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class TaskAttachment(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     task_id: int = Field(foreign_key="task.id")
     filename: str
     url: str     # e.g. /uploads/123_photo.jpg
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class InventoryItem(SQLModel, table=True):
@@ -79,7 +86,7 @@ class InventoryStock(SQLModel, table=True):
     item_id: int = Field(foreign_key="inventoryitem.id")
     quantity: int = 0
     min_level_override: Optional[int] = None
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class StockMovement(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -88,4 +95,4 @@ class StockMovement(SQLModel, table=True):
     reason: MovementReason = Field(default=MovementReason.usage)
     reference: Optional[str] = None
     author: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

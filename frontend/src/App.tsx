@@ -4,6 +4,7 @@ export default function App() {
   return (
     <div>
       <nav style={{ display: "flex", gap: 12, padding: 8, borderBottom: "1px solid #eee" }}>
+        <Link to="/">Dashboard</Link>
         <Link to="/tasks">Tasks</Link>
         <Link to="/sites">Sites</Link>
         <Link to="/inventory">Inventory</Link>

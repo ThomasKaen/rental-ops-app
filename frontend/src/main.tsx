@@ -8,7 +8,7 @@ import TaskDetail from "./pages/TaskDetail";
 import Inventory from "./pages/Inventory";
 import Sites from "./pages/Sites";
 import SiteDetail from "./pages/SiteDetail";
-import Units from "./pages/Units"; // <-- add this
+import Units from "./pages/Units";
 
 const router = createBrowserRouter([
   {
@@ -22,6 +22,7 @@ const router = createBrowserRouter([
       { path: "sites", element: <Sites /> },
       { path: "sites/:id", element: <SiteDetail /> },
       { path: "units", element: <Units /> },
+      { path: "dashboard", element: <Dashboard />},
     ],
   },
 ]);
