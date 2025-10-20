@@ -9,6 +9,7 @@ export default function App() {
         <Link to="/sites">Sites</Link>
         <Link to="/inventory">Inventory</Link>
         <Link to="/units">Units</Link>
+        <Link to="/maintenance">Maintenance</Link>
       </nav>
 
       <div style={{ padding: 12 }}>

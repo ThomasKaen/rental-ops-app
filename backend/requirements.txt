@@ -1,5 +1,28 @@
-fastapi==0.115.*
-uvicorn[standard]==0.30.*
-sqlmodel==0.0.22
-pydantic==2.9.*
-python-multipart==0.0.9
+# Core framework
+fastapi==0.119.1
+uvicorn[standard]==0.38.0
+
+# Database / ORM
+sqlmodel==0.0.27
+sqlalchemy==2.0.44
+
+# Validation
+pydantic==2.12.3
+pydantic-core==2.41.4
+
+# Async + Networking
+httpx==0.28.1
+anyio==4.11.0
+python-multipart==0.0.20
+
+# Utilities
+python-dotenv==1.1.1
+typing-extensions==4.15.0
+
+# Development / optional
+alembic==1.17.0
+ruff==0.14.1
+black==25.9.0
+mypy==1.18.2
+pytest==8.4.2
+watchfiles==1.1.1

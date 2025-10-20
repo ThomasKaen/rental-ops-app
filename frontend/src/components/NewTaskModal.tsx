@@ -32,6 +32,10 @@ export default function NewTaskModal({ open, onClose, onCreated, defaultSiteId, 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrence, setRecurrence] = useState<string>("");
+  const [recurInterval, setRecurInterval] = useState<number>(1);
+
   useEffect(() => {
     if (!open) return;
     (async () => {
@@ -153,6 +157,48 @@ export default function NewTaskModal({ open, onClose, onCreated, defaultSiteId, 
               </select>
             </label>
           </div>
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <input
+      type="checkbox"
+      checked={isRecurring}
+      onChange={(e) => setIsRecurring(e.target.checked)}
+    />
+    <span style={labelStyle}>Make this task recurring</span>
+  </label>
+
+  {isRecurring && (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 8 }}>
+      <label style={{ display: "grid", gap: 6 }}>
+        <span style={labelStyle}>Recurrence pattern</span>
+        <select
+          value={recurrence}
+          onChange={(e) => setRecurrence(e.target.value)}
+          style={input}
+        >
+          <option value="">(choose)</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </label>
+
+      <label style={{ display: "grid", gap: 6 }}>
+        <span style={labelStyle}>Every (interval)</span>
+        <input
+          type="number"
+          min={1}
+          value={recurInterval}
+          onChange={(e) => setRecurInterval(Math.max(1, Number(e.target.value)))}
+          style={input}
+        />
+      </label>
+    </div>
+  )}
+</div>
+
 
           {err && <div style={{ color: C.danger }}>{err}</div>}
         </div>

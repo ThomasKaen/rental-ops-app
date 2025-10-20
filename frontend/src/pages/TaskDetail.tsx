@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";   // ← add this
+import { useParams } from "react-router-dom";
 import api from "../lib/api";
 import Comments from "../components/Comments";
 import { isoToLocal, localToISO, prettyDate } from "../lib/datetime";

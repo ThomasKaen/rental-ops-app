@@ -9,6 +9,7 @@ import Inventory from "./pages/Inventory";
 import Sites from "./pages/Sites";
 import SiteDetail from "./pages/SiteDetail";
 import Units from "./pages/Units";
+import Maintenance from "@/pages/Maintenance";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { path: "sites/:id", element: <SiteDetail /> },
       { path: "units", element: <Units /> },
       { path: "dashboard", element: <Dashboard />},
+      { path: "maintenance", element: <Maintenance /> },
     ],
   },
 ]);

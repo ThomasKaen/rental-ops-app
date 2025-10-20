@@ -1,11 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from .db import init_db
-from .routers import sites, units, tasks, inventory, task_io
-from .routers import summary as summary_router
-from .routers import maintenance as maintenance_router
+from .routers.sites import router as sites_router
+from .routers.units import router as units_router
+from .routers.tasks import router as tasks_router
+from .routers.inventory import router as inventory_router
+from .routers.task_io import router as task_io_router
+from .routers.summary import router as summary_router
+from .routers.maintenance import router as maintenance_router
 
 origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
@@ -25,13 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(sites.router)
-app.include_router(units.router)
-app.include_router(tasks.router)
-app.include_router(inventory.router)
-app.include_router(task_io.router)
-app.include_router(summary_router.router)
-app.include_router(maintenance_router.router)
+app.include_router(sites_router, prefix="/api")
+app.include_router(units_router, prefix="/api")
+app.include_router(tasks_router, prefix="/api")
+app.include_router(inventory_router, prefix="/api")
+app.include_router(task_io_router, prefix="/api")
+app.include_router(summary_router, prefix="/api")
+app.include_router(maintenance_router, prefix="/api")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")

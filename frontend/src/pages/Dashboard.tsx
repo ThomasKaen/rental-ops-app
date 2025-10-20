@@ -29,8 +29,8 @@ export default function Dashboard() {
       try {
         // NOTE: use the SAME base + path style as Tasks.tsx (e.g. "/tasks")
         const [s, o] = await Promise.all([
-          api.get<Summary>("/summary"),
-          api.get<OverdueRow[]>("/summary/overdue"),
+          api.get<Summary>("/api/summary"),
+          api.get<OverdueRow[]>("/api/summary/overdue"),
         ]);
         setSum(s.data);
         setOverdue(o.data);

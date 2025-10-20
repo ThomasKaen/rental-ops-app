@@ -68,7 +68,7 @@ export default function SitesPage() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await api.get<Site[]>("/sites/"); // trailing slash avoids 307
+      const r = await api.get<Site[]>("/api/sites/"); // trailing slash avoids 307
       setSites(r.data);
     } catch (e: any) {
       setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load sites");
@@ -100,9 +100,9 @@ export default function SitesPage() {
       units: editing.units === null || editing.units === undefined ? null : Number(editing.units),
     };
     if (editing.id) {
-      await api.put(`/sites/${editing.id}`, payload);
+      await api.put(`/api/sites/${editing.id}`, payload);
     } else {
-      await api.post(`/sites/`, payload);
+      await api.post(`/api/sites/`, payload);
     }
     setEditing(null);
     await loadSites();
@@ -111,7 +111,7 @@ export default function SitesPage() {
 
   const deleteSite = async (s: Site) => {
     if (!confirm(`Delete "${s.name}"?`)) return;
-    await api.delete(`/sites/${s.id}`);
+    await api.delete(`/api/sites/${s.id}`);
     await loadSites();
     alert("Deleted ✔");
   };
