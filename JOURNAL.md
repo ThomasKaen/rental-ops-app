@@ -1,5 +1,22 @@
 # Project Journal
 
+## 2025-10-21 — v0.3.0 Complete ✅
+- Dashboard online with real KPIs + overdue list.
+- Recurring maintenance engine wired end-to-end (preview + generate).
+- Task creation supports recurrence; scheduler page added.
+- `/api` namespace enforced; Axios-only client; UTC datetimes everywhere.
+- Docker updated (Py 3.14, Node 22, Nginx proxy).
+
+Reflections:
+- Alignment work (prefixes, UTC, Axios) eliminated a lot of silent 404s / crashes.
+- Lightweight SQLite migration script was enough; no Alembic needed yet.
+- Codebase feels consistent and ready for daily use.
+
+Next:
+- v0.4.0 “Ops Reliability”: comments/activity log, attachments, daily digests, task filters.
+
+---
+
 ## 2025-10-13 — v0.2.0 Complete 🚀
 - Reached full MVP state — Sites, Units, Tasks, and Inventory all connected.
 - Created new **Units module** with bulk add and per-site linking.

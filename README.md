@@ -1,37 +1,26 @@
 # Rental Ops App
 
-**A full-stack property operations tool for managing tasks, sites, units, and inventory.**
-
-# v0.2.0 — MVP Integration Release
-
-Rental Ops has reached its first complete operational milestone — you can now manage properties (Sites), their Units, related Tasks, and Inventory in one cohesive workflow.
+**Property operations tool** for managing Sites, Units, Tasks, and Inventory — now with **Dashboard** and **Maintenance Scheduler**.
 
 ---
 
-## ✨ Features
+## 🧭 Version
+- **v0.3.0 – Maintenance Flow (MVP Complete)**
+- Next: **v0.4.0 – Ops Reliability** (comments, attachments, digests, filters)
 
-### 🏠 Sites
-- CRUD with search and metadata (unit count)
-- “Manage Units” deep-link button
-- Clean unified interface
+---
 
-### 🏢 Units
-- Linked directly to Sites (`/sites/{id}/units/`)
-- Create, edit, delete units
-- Bulk Add utility (Unit 1…N)
-- Query param support (`?site_id=123` auto-selects)
-
-### 📋 Tasks
-- CRUD with improved modal
-- Select existing Site + Unit (no manual IDs)
-- Priority, due date, description, validation
-- Readable backend error display
-
-### 📦 Inventory
-- Manage items + stock per Site
-- CRUD for items and quantities
-- Matches unified UI layout
-
+## ✨ New in v0.3.0
+- **Dashboard:**  
+  `/api/summary` KPIs + `/api/summary/overdue` list
+- **Maintenance Scheduler:**  
+  `/api/maintenance/preview` and `/api/maintenance/materialize`
+- **Tasks:**  
+  Recurrence fields in New Task modal
+- **Unified API:**  
+  All endpoints under `/api/*` (Axios-only client)
+- **Infra:**  
+  Python 3.14 backend, Node 22 + Nginx proxy (`/api` → FastAPI)
 ---
 
 ## 🧭 Project Structure

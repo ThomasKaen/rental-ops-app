@@ -4,27 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.3.0 - dashboard, summary">
-      <change afterPath="$PROJECT_DIR$/backend/app/scripts/migrate_v030.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/TaskRecurrence.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/pages/Maintenance.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/rental-ops-app.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/rental-ops-app.iml" afterDir="false" />
+    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/routers/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/tasks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/nginx.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/NewTaskModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/NewTaskModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/main.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/main.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Dashboard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Dashboard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Inventory.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Inventory.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Sites.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Sites.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/TaskDetail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TaskDetail.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Tasks.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Units.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Units.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/JOURNAL.md" beforeDir="false" afterPath="$PROJECT_DIR$/JOURNAL.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -214,7 +197,15 @@
       <option name="project" value="LOCAL" />
       <updated>1760374270787</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing">
+      <option name="closed" value="true" />
+      <created>1760976433328</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1760976433328</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -231,6 +222,7 @@
     <MESSAGE value="v0.2.0 - Sites UI polish" />
     <MESSAGE value="v0.2.0 - release + documentation" />
     <MESSAGE value="v0.3.0 - dashboard, summary" />
-    <option name="LAST_COMMIT_MESSAGE" value="v0.3.0 - dashboard, summary" />
+    <MESSAGE value="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing" />
+    <option name="LAST_COMMIT_MESSAGE" value="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing" />
   </component>
 </project>

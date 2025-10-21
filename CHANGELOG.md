@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.3.0] - 2025-10-21
+### Added
+- **Dashboard**
+  - `/api/summary` KPIs (sites, units, open, overdue, due today/week)
+  - `/api/summary/overdue` list for quick action
+- **Maintenance Scheduler**
+  - `/api/maintenance/preview` (with `within_days` support)
+  - `/api/maintenance/materialize` (creates next occurrences and advances template)
+  - New UI page: **Maintenance** (preview + generate)
+- **Tasks**
+  - Recurrence fields in **New Task** modal (`is_recurring`, `recurrence`, `recur_interval`)
+- **DB Migration**
+  - `app/scripts/migrate_v030.py` adds recurrence columns idempotently
+- **Infra**
+  - Unified API namespace under **`/api/*`**
+  - Backend Docker: **Python 3.14-slim**, `pip check`, wheel-only installs
+  - Frontend Docker: Node 22 build + Nginx proxy `/api → api:8000`
+
+### Changed
+- Axios-only data access (`lib/api`) across the app
+- Timezone handling standardized on `datetime.now(timezone.utc)`
+- Summary endpoint made pydantic-safe (no `RowMapping` in responses)
+- Robust SQLModel counting helper (no `scalar_one()`)
+
+### Fixed
+- 404s from missing `/api` prefix
+- React crash when rendering raw error objects
+- Task query ordering & SQLite missing-column errors after upgrades
+
+### Notes
+- This completes the **“Maintenance Flow” MVP**.
+- Next: **v0.4.0 Ops Reliability** (comments/activity log, attachments, digests, filters).
+
+---
+
 ## [0.2.0] - 2025-10-13
 ### Added
 - **Sites module**
