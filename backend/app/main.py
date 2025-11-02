@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -11,7 +13,10 @@ from .routers.task_io import router as task_io_router
 from .routers.summary import router as summary_router
 from .routers.maintenance import router as maintenance_router
 
-origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+origins = ["http://localhost:5173", "https://rental-ops-app.vercel.app"]
+
+if os.getenv("ENV", "development") != "production":
+    load_dotenv()            # or load_dotenv(override=False)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,9 +29,11 @@ app = FastAPI(title="Rental Ops API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # allow preview urls
+    allow_credentials=True,   # keep True only if you actually use cookies/sessions
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(sites_router, prefix="/api")
