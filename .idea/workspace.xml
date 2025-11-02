@@ -4,10 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing">
+    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.3.0 - Documentation">
+      <change afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/JOURNAL.md" beforeDir="false" afterPath="$PROJECT_DIR$/JOURNAL.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -205,7 +206,15 @@
       <option name="project" value="LOCAL" />
       <updated>1760976433328</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="v0.3.0 - Documentation">
+      <option name="closed" value="true" />
+      <created>1761058918252</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1761058918252</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -223,6 +232,7 @@
     <MESSAGE value="v0.2.0 - release + documentation" />
     <MESSAGE value="v0.3.0 - dashboard, summary" />
     <MESSAGE value="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing" />
-    <option name="LAST_COMMIT_MESSAGE" value="v0.3.0 - Python 3.14 update, requirements, correct /api/ routing" />
+    <MESSAGE value="v0.3.0 - Documentation" />
+    <option name="LAST_COMMIT_MESSAGE" value="v0.3.0 - Documentation" />
   </component>
 </project>

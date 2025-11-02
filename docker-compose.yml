@@ -12,6 +12,9 @@ services:
       - ./backend/app:/app/app
       - ./backend/data:/app/data
       - ./backend/uploads:/app/uploads
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
   web:
     build:
       context: ./frontend

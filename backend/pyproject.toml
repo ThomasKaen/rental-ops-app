@@ -2,7 +2,7 @@
 name = "rental-ops-app"
 version = "0.3.0"
 description = "FastAPI backend for Rental Ops App"
-authors = ["You <you@example.com>"]
+authors = ["Tamas Kiss thomas.kaen.freelance@gmail.com"]
 
 
 [tool.poetry.dependencies]
