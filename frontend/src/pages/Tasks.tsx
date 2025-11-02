@@ -70,7 +70,7 @@ export default function Tasks(){
   const load = async () => {
     setLoading(true); setErr(null)
     try {
-      const r = await api.get('/api/tasks' + qs)
+      const r = await api.get('tasks' + qs)
       setTasks(r.data)
     } catch (e:any) {
       setErr(e?.message || 'Failed to load tasks')
@@ -84,7 +84,7 @@ export default function Tasks(){
   // load sites once (use trailing slash to avoid 307)
   useEffect(() => {
     (async () => {
-      const r = await api.get("/api/sites/")
+      const r = await api.get("sites")
       setSites(r.data)
     })()
   }, [])
@@ -93,7 +93,7 @@ export default function Tasks(){
   useEffect(() => {
     (async () => {
       if (siteId !== '') {
-        const r = await api.get(`/api/sites/${siteId}/units/`) // trailing slash
+        const r = await api.get(`sites/${siteId}/units/`) // trailing slash
         setUnits(r.data)
       } else {
         setUnits([])

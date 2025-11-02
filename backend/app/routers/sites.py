@@ -6,11 +6,11 @@ from ..models import Site, Unit
 
 router = APIRouter(prefix="/sites", tags=["sites"])
 
-@router.get("/", response_model=List[Site])
+@router.get("", response_model=List[Site])
 def list_sites(session: Session = Depends(get_session)):
     return session.exec(select(Site).order_by(Site.name)).all()
 
-@router.post("/", response_model=Site)
+@router.post("", response_model=Site)
 def create_site(site: Site, session: Session = Depends(get_session)):
     session.add(site); session.commit(); session.refresh(site); return site
 

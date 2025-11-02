@@ -57,7 +57,7 @@ export default function UnitsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await api.get<Site[]>("/api/sites/"); // trailing slash to avoid 307
+        const r = await api.get<Site[]>("sites/"); // trailing slash to avoid 307
         setSites(r.data);
       } catch {
         /* ignore for now */
@@ -71,7 +71,7 @@ export default function UnitsPage() {
       if (!siteId) { setUnits([]); return; }
       setLoading(true); setErr(null);
       try {
-        const r = await api.get<Unit[]>(`/api/sites/${siteId}/units/`); // trailing slash
+        const r = await api.get<Unit[]>(`sites/${siteId}/units/`); // trailing slash
         setUnits(r.data);
       } catch (e: any) {
         setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load units");
@@ -103,10 +103,10 @@ export default function UnitsPage() {
 
   // Create Unit 1..N
   for (let i = 1; i <= n; i++) {
-    await api.post(`/api/sites/${siteId}/units/`, { name: `Unit ${i}`, notes: null });
+    await api.post(`sites/${siteId}/units/`, { name: `Unit ${i}`, notes: null });
   }
   // reload
-  const r = await api.get(`/api/sites/${siteId}/units/`);
+  const r = await api.get(`sites/${siteId}/units/`);
   setUnits(r.data);
   alert(`Created ${n} units ✔`);
   };
@@ -118,14 +118,14 @@ export default function UnitsPage() {
       notes: (editing.notes ?? "").toString().trim() || null,
     };
     if (editing.id) {
-      await api.put(`/api/units/${editing.id}`, payload);
+      await api.put(`units/${editing.id}`, payload);
     } else {
-      await api.post(`/api/sites/${editing.site_id}/units/`, payload);
+      await api.post(`sites/${editing.site_id}/units/`, payload);
     }
     setEditing(null);
     // reload
     if (siteId) {
-      const r = await api.get<Unit[]>(`/api/sites/${siteId}/units/`);
+      const r = await api.get<Unit[]>(`sites/${siteId}/units/`);
       setUnits(r.data);
     }
     alert("Saved ✔");
@@ -133,9 +133,9 @@ export default function UnitsPage() {
 
   const deleteUnit = async (u: Unit) => {
     if (!confirm(`Delete unit "${u.name}"?`)) return;
-    await api.delete(`/api/units/${u.id}`);
+    await api.delete(`units/${u.id}`);
     if (siteId) {
-      const r = await api.get<Unit[]>(`/api/sites/${siteId}/units/`);
+      const r = await api.get<Unit[]>(`sites/${siteId}/units/`);
       setUnits(r.data);
     }
     alert("Deleted ✔");

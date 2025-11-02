@@ -23,7 +23,7 @@ def _count(session: Session, stmt) -> int:
         v = v[0]
     return int(v or 0)
 
-@router.get("/")
+@router.get("")
 def get_summary(session: Session = Depends(get_session)) -> Dict[str, Any]:
     now = datetime.now(timezone.utc)
     today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)

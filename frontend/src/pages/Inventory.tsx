@@ -35,17 +35,17 @@ export default function Inventory() {
   const [reference, setReference] = useState<string>("");
 
   const loadItems = async () => {
-    try { const r = await api.get("/api/inventory/items"); setItems(r.data); }
+    try { const r = await api.get("inventory/items"); setItems(r.data); }
     catch (e: any) { setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load items"); }
   };
   const loadSites = async () => {
-    try { const r = await api.get("/api/sites/"); setSites(r.data); } // NOTE: trailing slash
+    try { const r = await api.get("sites/"); setSites(r.data); } // NOTE: trailing slash
     catch { /* ignore */ }
   };
   const loadStock = async (sid: number) => {
     setLoading(true); setErr(null);
     try {
-      const r = await api.get(`/api/inventory/stock?site_id=${sid}`);
+      const r = await api.get(`inventory/stock?site_id=${sid}`);
       setStock(r.data);
     } catch (e: any) {
       setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load stock");
@@ -63,12 +63,12 @@ export default function Inventory() {
     if (!editing?.name?.trim() || !editing?.sku?.trim()) return;
     try {
       if (editing.id) {
-        await api.put(`/api/inventory/items/${editing.id}`, {
+        await api.put(`inventory/items/${editing.id}`, {
           name: editing.name, sku: editing.sku, uom: editing.uom,
           category: editing.category ?? null, notes: editing.notes ?? null
         });
       } else {
-        await api.post(`/api/inventory/items`, {
+        await api.post(`inventory/items`, {
           name: editing.name, sku: editing.sku, uom: editing.uom,
           category: editing.category ?? null, notes: editing.notes ?? null
         });
@@ -83,7 +83,7 @@ export default function Inventory() {
 
   const deleteItem = async (id: number) => {
     if (!confirm("Delete this item?")) return;
-    await api.delete(`/api/inventory/items/${id}`);
+    await api.delete(`inventory/items/${id}`);
     await loadItems();
     if (siteId) await loadStock(siteId as number);
   };
@@ -91,7 +91,7 @@ export default function Inventory() {
   // stock upsert
   const setQty = async (itemId: number, qty: number) => {
     if (!siteId) return;
-    await api.post(`/api/inventory/stock/upsert`, { site_id: siteId, item_id: itemId, quantity: qty });
+    await api.post(`inventory/stock/upsert`, { site_id: siteId, item_id: itemId, quantity: qty });
     await loadStock(siteId as number);
   };
 
@@ -99,7 +99,7 @@ export default function Inventory() {
   const openMove = (s: Stock) => { setMoveFor(s); setDelta(0); setReason("usage"); setReference(""); };
   const saveMove = async () => {
     if (!moveFor || !siteId || !delta) { setMoveFor(null); return; }
-    await api.post(`/api/inventory/stock/${moveFor.id}/move`, { delta, reason, reference, author: "web" });
+    await api.post(`inventory/stock/${moveFor.id}/move`, { delta, reason, reference, author: "web" });
     setMoveFor(null);
     await loadStock(siteId as number);
   };

@@ -13,8 +13,6 @@ from .routers.task_io import router as task_io_router
 from .routers.summary import router as summary_router
 from .routers.maintenance import router as maintenance_router
 
-origins = ["http://localhost:5173", "https://rental-ops-app.vercel.app"]
-
 if os.getenv("ENV", "development") != "production":
     load_dotenv()            # or load_dotenv(override=False)
 
@@ -23,26 +21,36 @@ async def lifespan(app: FastAPI):
     init_db()
     yield  # teardown if needed
 
-app = FastAPI(title="Rental Ops API", lifespan=lifespan)
+app = FastAPI(
+    title="Rental Ops API",
+    docs_url="/api/docs",             # 👈 move docs under /api
+    openapi_url="/api/openapi.json",  # 👈 move schema under /api
+)
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # allow preview urls
-    allow_credentials=True,   # keep True only if you actually use cookies/sessions
+    allow_origins=[
+        "http://localhost:5173",
+        "https://rental-ops-app.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
-app.include_router(sites_router, prefix="/api")
-app.include_router(units_router, prefix="/api")
-app.include_router(tasks_router, prefix="/api")
-app.include_router(inventory_router, prefix="/api")
-app.include_router(task_io_router, prefix="/api")
-app.include_router(summary_router, prefix="/api")
-app.include_router(maintenance_router, prefix="/api")
+# mount all feature routers under /api
+api = APIRouter(prefix="/api")
+app.include_router(sites_router)
+app.include_router(units_router)
+app.include_router(tasks_router)
+app.include_router(inventory_router)
+app.include_router(summary_router)
+app.include_router(maintenance_router)
+app.include_router(api)
+
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")

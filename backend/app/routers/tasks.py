@@ -52,14 +52,14 @@ def _coerce_dt(dt):
         return d
     return dt
 
-@router.get("/", response_model=List[Task])
+@router.get("", response_model=List[Task])
 def list_tasks(session: Session = Depends(get_session), site_id: int | None = None):
     q = select(Task)
     if site_id is not None:
         q = q.where(Task.site_id == site_id)
     return session.exec(q.order_by(Task.created_at.desc())).all()
 
-@router.post("/", response_model=Task)
+@router.post("", response_model=Task)
 def create_task(payload: TaskIn, session: Session = Depends(get_session)):
     t = Task(
         title=payload.title,

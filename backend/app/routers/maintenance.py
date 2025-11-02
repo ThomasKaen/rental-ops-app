@@ -33,7 +33,7 @@ def _task_to_dict(t: Task) -> Dict[str, Any]:
         "last_scheduled_at": t.last_scheduled_at,
     }
 
-@router.get("/preview", response_model=List[Dict[str, Any]])
+@router.get("", response_model=List[Dict[str, Any]])
 def preview_materialization(
     session: Session = Depends(get_session),
 ) -> List[Dict[str, Any]]:

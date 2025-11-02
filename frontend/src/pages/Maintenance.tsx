@@ -34,7 +34,7 @@ export default function Maintenance() {
     setMsg(null);
     setErr(null);
     try {
-      const res = await api.get<PreviewRow[]>("/api/maintenance/preview");
+      const res = await api.get<PreviewRow[]>("maintenance/preview");
       setRows(res.data);
     } catch (e: any) {
       setErr(e?.response?.data ?? e?.message ?? "Failed to load preview");
@@ -51,7 +51,7 @@ export default function Maintenance() {
     setMsg(null);
     setErr(null);
     try {
-      const res = await api.post<{ created: number }>("/api/maintenance/materialize");
+      const res = await api.post<{ created: number }>("maintenance/materialize");
       setMsg(`Created ${res.data.created} task(s).`);
       await load();
     } catch (e: any) {
