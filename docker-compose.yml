@@ -1,65 +1,47 @@
-name: rental-ops
-
 services:
   db:
     image: postgres:16
-    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./ops/backups:/backups
-    networks: [net]
+      POSTGRES_DB: rentalops
+      POSTGRES_USER: rentalops
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rentalops -d rentalops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      ENV: ${ENV}
-      CORS_ORIGINS: ${CORS_ORIGINS}
+    env_file:
+      - ./backend/.env
     depends_on:
-      - db
-    expose:
-      - "8000"
+      db:
+        condition: service_healthy
     command: >
-      sh -c "alembic -c alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
-    networks: [net]
+      sh -c "alembic -c alembic.ini upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
 
   web:
     build:
       context: ./frontend
-    restart: unless-stopped
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-    expose:
-      - "80"
-    networks: [net]
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
 
   caddy:
     image: caddy:2
-    restart: unless-stopped
+    depends_on:
+      - web
+      - api
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - api
-      - web
-    networks: [net]
-
-networks:
-  net:
-
-volumes:
-  db_data:
-  caddy_data:
-  caddy_config:

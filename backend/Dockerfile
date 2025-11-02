@@ -1,19 +1,19 @@
+# backend/Dockerfile
 FROM python:3.14-slim
-
-WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# system build deps if you need them (optional)
-RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
-# install deps
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# deps
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# ⬇️ copy the ENTIRE backend folder (so alembic.ini + alembic/ come in)
-COPY . .
+# app code (includes app/, alembic.ini, etc.)
+COPY . /app
 
-# optional, helps imports like "import app.models"
-ENV PYTHONPATH=/app
+# default; Cloud Run will override port with $PORT
+CMD ["python","-m","uvicorn","app.main:app","--host","0.0.0.0","--port","8080"]
+
