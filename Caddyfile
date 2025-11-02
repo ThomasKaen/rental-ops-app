@@ -1,0 +1,9 @@
+api.135.181.36.78.nip.io {
+    encode gzip
+    reverse_proxy api:8000
+}
+
+app.135.181.36.78.nip.io {
+    encode gzip
+    reverse_proxy web:80
+}
