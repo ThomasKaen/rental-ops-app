@@ -1,40 +1,66 @@
-version: "3.9"
+name: rental-ops
+
 services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./ops/backups:/backups
+    networks: [net]
+
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     environment:
-      DATABASE_URL: "sqlite:////app/data/app.db"
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend/app:/app/app
-      - ./backend/data:/app/data
-      - ./backend/uploads:/app/uploads
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      ENV: ${ENV}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      - db
+    expose:
+      - "8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             gunicorn -k uvicorn.workers.UvicornWorker -w 2 backend.main:app --bind 0.0.0.0:8000"
+    networks: [net]
+
   web:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:80"
-    depends_on:
-      - api
-  web-dev:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    command: sh -c "npm ci || npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    restart: unless-stopped
     environment:
-      - VITE_API_URL=http://localhost:8000
-      - CHOKIDAR_USEPOLLING=true
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    expose:
+      - "80"
+    networks: [net]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - api
+      - web
+    networks: [net]
+
+networks:
+  net:
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
