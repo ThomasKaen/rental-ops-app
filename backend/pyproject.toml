@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rental-ops-app"
-version = "0.3.0"
+version = "0.4.0"
 description = "FastAPI backend for Rental Ops App"
 authors = ["Tamas Kiss thomas.kaen.freelance@gmail.com"]
 

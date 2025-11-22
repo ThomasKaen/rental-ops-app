@@ -1,35 +1,25 @@
-# ---------- Frontend build ----------
-FROM node:20-slim AS fe
-WORKDIR /fe
+FROM python:3.14
 
-# install deps (include dev deps explicitly)
-COPY frontend/package*.json ./
-RUN npm ci --include=dev
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV ENV=production
+ENV PORT=8080
 
-# copy source and build using node (avoids "vite: permission denied")
-COPY frontend/ ./
-RUN node ./node_modules/vite/bin/vite.js build   # outputs to /fe/dist
+WORKDIR /app
 
-# ---------- Backend runtime ----------
-FROM python:3.14-slim AS api
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# system deps (psycopg, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-COPY backend/requirements.txt /app/
-RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# app code
-COPY backend/ /app/
+COPY . .
 
-# bring the built frontend into the backend tree
-COPY --from=fe /fe/dist /app/frontend/dist
+RUN mkdir -p uploads
 
 EXPOSE 8080
+
+# No shell, no $PORT expansion, just listen on 8080.
+# Cloud Run sets PORT=8080 by default, so this is compliant.
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
