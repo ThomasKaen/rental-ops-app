@@ -1,170 +1,106 @@
+// src/pages/TaskDetail.tsx
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import api from "../lib/api";
-import Comments from "../components/Comments";
-import { isoToLocal, localToISO, prettyDate } from "../lib/datetime";
+import { useParams, Link, useLocation } from "react-router-dom";
+import { getTask, updateTask, type Task } from "../services/tasks";
 
-
-export default function TaskDetail() {
+export default function TaskDetailPage() {
   const { id } = useParams();
+  const taskId = Number(id);
+  const location = useLocation();
+  const backTo =
+    (location.state as { from?: string } | undefined)?.from ?? "/tasks";
+
   const [task, setTask] = useState<Task | null>(null);
-  const [assignee, setAssignee] = useState("");
-  const [dueLocal, setDueLocal] = useState("");
-  const [pending, setPending] = useState<null | "status" | "assignee" | "due">(null);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const load = () =>
-    api.get(`/tasks/${id}`).then((r) => {
-      setTask(r.data);
-      setAssignee(r.data.assignee || "");
-      setDueLocal(isoToLocal(r.data.due_at));
-    });
+  useEffect(() => {
+    if (!taskId) return;
+    (async () => {
+      try {
+        setLoading(true);
+        setErr(null);
+        const t = await getTask(taskId);
+        setTask(t);
+      } catch (e: any) {
+        setErr(e?.message ?? "Failed to load task");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [taskId]);
 
-  useEffect(() => { load(); }, [id]);
-
-  if (!task) return <div>Loading...</div>;
-
-  // Back target: prefer the task’s own site/unit (works even if opened in new tab)
-  const backHref =
-    task?.site_id
-      ? `/tasks?site_id=${task.site_id}${task?.unit_id ? `&unit_id=${task.unit_id}` : ""}`
-      : "/tasks";
-
-  async function update(status: string) {
-    await api.patch(`/tasks/${id}`, { status });
-    await load();
-  }
-
-  async function saveAssignee() {
-  await optimistic("assignee",
-    d => ({ ...d, assignee: assignee || null }),
-    () => api.patch(`/tasks/${id}`, { assignee: assignee || null })
-  );
+  async function onStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    if (!task) return;
+    const status = e.target.value;
+    setSaving(true);
+    try {
+      const updated = await updateTask(task.id, { status });
+      setTask(updated);
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to update task");
+    } finally {
+      setSaving(false);
     }
-
-  async function deleteTask() {
-    if (!confirm("Delete this task?")) return;
-    await api.delete(`/tasks/${id}`);
-    // plain redirect keeps things simple and avoids router hooks entirely
-    window.location.href = backHref;
   }
 
-  async function optimistic<T>(
-  label: "status" | "assignee" | "due",
-  apply: (draft: Task) => Task,
-  request: () => Promise<T>
-) {
-  if (!task) return;
-  setErr(null);
-  setPending(label);
-  const prev = task;
-  const next = apply({ ...task });
-  setTask(next);                    // instant UI
-  try {
-    await request();                // server commit
-  } catch (e: any) {
-    setTask(prev);                  // rollback
-    setErr(e?.response?.data?.detail || e?.message || "Update failed");
-  } finally {
-    setPending(null);
-  }
-}
+  if (!taskId) return <div>Missing task id.</div>;
+  if (loading) return <div>Loading…</div>;
+  if (err) return <div style={{ color: "#b91c1c" }}>{err}</div>;
+  if (!task) return <div>Task not found.</div>;
 
   return (
-    <div style={{ paddingBottom: 80 }}>
-      <h3>{task.title}</h3>
-      <p>{task.description}</p>
+    <div style={{ padding: 16, maxWidth: 800, margin: "0 auto" }}>
+      <Link to={backTo} style={{ fontSize: 14 }}>
+        ← Back to tasks
+      </Link>
 
-      {/* Back link (no router hooks needed) */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <a href={backHref}>&larr; Back</a>
-      </div>
+      <h1 style={{ fontSize: 26, margin: "12px 0" }}>{task.title}</h1>
 
-      {/* Assignee */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0" }}>
-        <input
-          placeholder="Assignee (e.g. tamas)"
-          value={assignee}
-          onChange={(e) => setAssignee(e.target.value)}
-        />
-        <button onClick={saveAssignee}>{assignee ? "Assign" : "Unassign"}</button>
-      </div>
-
-      {/* Due date */}
-      <div style={{ display: "grid", gap: 8, margin: "8px 0" }}>
-        <div>
-          <strong>Due:</strong> {prettyDate(task.due_at)}
-          {isOverdue(task) && <span style={{ color: "#dc2626" }}> · Overdue</span>}
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input
-            type="datetime-local"
-            value={dueLocal}
-            onChange={(e) => setDueLocal(e.target.value)}
-          />
-          <button disabled={pending==="due"} onClick={async () => {
-          await optimistic("due",
-            d => ({ ...d, due_at: localToISO(dueLocal) }),
-            () => api.patch(`/tasks/${id}`, { due_at: localToISO(dueLocal) })
-          );
-        }}>Save due date</button>
-
-        {task.due_at && (
-          <button disabled={pending==="due"} onClick={async () => {
-            await optimistic("due",
-              d => ({ ...d, due_at: null }),
-              () => api.patch(`/tasks/${id}`, { due_at: null })
-            );
-          }}>Clear due</button>
-        )}
-        </div>
-      </div>
-
-      {/* Status + Delete */}
-      <p>
-        Status: <strong>{task.status}</strong>
+      <p style={{ margin: "4px 0", fontSize: 14, color: "#555" }}>
+        <strong>Status:</strong>{" "}
+        <select value={task.status} onChange={onStatusChange} disabled={saving}>
+          <option value="new">new</option>
+          <option value="in_progress">in progress</option>
+          <option value="awaiting_parts">awaiting parts</option>
+          <option value="blocked">blocked</option>
+          <option value="done">done</option>
+          <option value="cancelled">cancelled</option>
+        </select>
       </p>
-      <div
-        style={{
-          position: "fixed",
-          bottom: 56,
-          left: 0,
-          right: 0,
-          display: "flex",
-          gap: 8,
-          padding: 8,
-          background: "#fff",
-          borderTop: "1px solid #eee",
-        }}
-      >
-        <button disabled={pending==="status"} onClick={() =>
-          optimistic("status", d => ({ ...d, status: "in_progress" }),
-            () => api.patch(`/tasks/${id}`, { status: "in_progress" }))
-        }>Start</button>
 
-        <button disabled={pending==="status"} onClick={() =>
-          optimistic("status", d => ({ ...d, status: "awaiting_parts" }),
-            () => api.patch(`/tasks/${id}`, { status: "awaiting_parts" }))
-        }>Awaiting parts</button>
+      <p style={{ margin: "4px 0", fontSize: 14 }}>
+        <strong>Priority:</strong> {task.priority}
+      </p>
+      {task.assignee && (
+        <p style={{ margin: "4px 0", fontSize: 14 }}>
+          <strong>Assignee:</strong> @{task.assignee}
+        </p>
+      )}
+      {task.due_at && (
+        <p style={{ margin: "4px 0", fontSize: 14 }}>
+          <strong>Due:</strong> {new Date(task.due_at).toLocaleString()}
+        </p>
+      )}
 
-        <button disabled={pending==="status"} onClick={() =>
-          optimistic("status", d => ({ ...d, status: "done" }),
-            () => api.patch(`/tasks/${id}`, { status: "done" }))
-        }>Done</button>
-        <div style={{ marginLeft: "auto" }}>
-          <button onClick={deleteTask} style={{ color: "#b91c1c" }}>
-            Delete Task
-          </button>
-        </div>
-      </div>
+      {task.site && (
+        <p style={{ margin: "4px 0", fontSize: 14 }}>
+          <strong>Site:</strong> {task.site.name} (id {task.site.id})
+        </p>
+      )}
+      {task.unit && (
+        <p style={{ margin: "4px 0", fontSize: 14 }}>
+          <strong>Unit:</strong> {task.unit.name} (id {task.unit.id})
+        </p>
+      )}
 
-      <Comments taskId={Number(id)} />
+      {task.description && (
+        <>
+          <h2 style={{ marginTop: 20, fontSize: 18 }}>Description</h2>
+          <p>{task.description}</p>
+        </>
+      )}
     </div>
   );
-}
-
-function isOverdue(t: { due_at?: string | null; status: string }) {
-  if (!t.due_at) return false;
-  if (t.status === "done" || t.status === "cancelled") return false;
-  return new Date(t.due_at).getTime() < Date.now();
 }

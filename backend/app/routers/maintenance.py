@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 
@@ -12,8 +13,10 @@ from ..services.recurrence import next_due, within_until
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
+
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
 
 def _task_to_dict(t: Task) -> Dict[str, Any]:
     return {
@@ -33,6 +36,7 @@ def _task_to_dict(t: Task) -> Dict[str, Any]:
         "last_scheduled_at": t.last_scheduled_at,
     }
 
+
 @router.get("", response_model=List[Dict[str, Any]])
 def preview_materialization(
     session: Session = Depends(get_session),
@@ -46,13 +50,12 @@ def preview_materialization(
             Task.is_recurring == True,
             Task.recurrence.is_not(None),
             Task.due_at.is_not(None),
-            Task.status != Status.done,  # ignore archived templates
+            Task.status != Status.done,
         )
     ).all()
 
     preview: List[Dict[str, Any]] = []
     for base in bases:
-        # Guard: if we already advanced this cycle, skip
         if base.last_scheduled_at and base.due_at and base.last_scheduled_at >= base.due_at:
             continue
 
@@ -65,19 +68,22 @@ def preview_materialization(
                 recur_dom=base.recur_dom,
             )
             if within_until(nd, base.recur_until):
-                preview.append({
-                    "template": _task_to_dict(base),
-                    "will_create": {
-                        "title": base.title,
-                        "site_id": base.site_id,
-                        "unit_id": base.unit_id,
-                        "priority": getattr(base.priority, "value", base.priority),
-                        "due_at": nd,
-                    },
-                    "will_advance_template_to": nd,
-                })
+                preview.append(
+                    {
+                        "template": _task_to_dict(base),
+                        "will_create": {
+                            "title": base.title,
+                            "site_id": base.site_id,
+                            "unit_id": base.unit_id,
+                            "priority": getattr(base.priority, "value", base.priority),
+                            "due_at": nd,
+                        },
+                        "will_advance_template_to": nd,
+                    }
+                )
 
     return preview
+
 
 @router.post("/materialize")
 def materialize_recurring(
@@ -92,19 +98,20 @@ def materialize_recurring(
     created = 0
 
     bases: List[Task] = session.exec(
-        select(Task).where(
+        select(Task)
+        .where(
             Task.is_recurring == True,
             Task.recurrence.is_not(None),
             Task.due_at.is_not(None),
             Task.status != Status.done,
-        ).order_by(Task.due_at.asc())
+        )
+        .order_by(Task.due_at.asc())
     ).all()
 
     for base in bases:
         if created >= limit:
             break
 
-        # Skip if already materialized for current cycle
         if base.last_scheduled_at and base.due_at and base.last_scheduled_at >= base.due_at:
             continue
 
@@ -117,18 +124,18 @@ def materialize_recurring(
                 recur_dom=base.recur_dom,
             )
             if not within_until(nd, base.recur_until):
-                # mark as advanced but no further schedules ahead; stop advancing template
                 base.last_scheduled_at = now
                 session.add(base)
                 continue
 
-            # Create occurrence as a normal task
             occ = Task(
                 site_id=base.site_id,
                 unit_id=base.unit_id,
                 title=base.title,
                 description=base.description,
-                priority=base.priority if isinstance(base.priority, Priority) else Priority.green,
+                priority=base.priority
+                if isinstance(base.priority, Priority)
+                else Priority.green,
                 status=Status.new,
                 assignee=base.assignee,
                 due_at=nd,
@@ -142,7 +149,6 @@ def materialize_recurring(
             )
             session.add(occ)
 
-            # Advance the template forward one cycle
             base.due_at = nd
             base.last_scheduled_at = now
             session.add(base)
