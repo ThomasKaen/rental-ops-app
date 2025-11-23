@@ -1,7 +1,0 @@
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-# Install once in the image so the first run is fast; bind mount may still run npm ci if package-lock changes.
-RUN npm install
-# Vite dev server; the compose command can override this to add --host/--port
-CMD ["npm", "run", "dev"]

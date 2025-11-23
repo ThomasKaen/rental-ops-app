@@ -1,201 +1,337 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import api from '../lib/api'
-import NewTaskModal from '../components/NewTaskModal'
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
-type Task = {
-  id:number; title:string; site?: {id:number; name:string}; unit?: {id:number; name:string}; priority:'red'|'amber'|'green';
-  status:'new'|'in_progress'|'awaiting_parts'|'blocked'|'done'|'cancelled';
-  assignee?: string; due_at?: string | null
+import NewTaskModal from "../components/NewTaskModal";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+
+import {
+  listTasksByQuery,
+  listTaskSites,
+  listUnitsForSite,
+  type Task,
+  type SiteRef,
+  type UnitRef,
+} from "../services/tasks";
+
+const STATUS_OPTIONS = [
+  "new",
+  "in_progress",
+  "awaiting_parts",
+  "blocked",
+  "done",
+  "cancelled",
+] as const;
+
+function chipClass(active: boolean) {
+  return [
+    "inline-flex items-center rounded-full border px-3 py-1 text-xs capitalize",
+    active
+      ? "border-blue-500 bg-blue-50 text-blue-700"
+      : "border-slate-200 bg-white text-slate-700",
+  ].join(" ");
 }
 
-const STATUS_OPTIONS = ["new","in_progress","awaiting_parts","blocked","done","cancelled"] as const;
-type StatusVal = (typeof STATUS_OPTIONS)[number];
+export default function Tasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-function chipStyle(active: boolean): React.CSSProperties {
-  return {
-    padding: "6px 10px",
-    borderRadius: 999,
-    border: "1px solid",
-    borderColor: active ? "#2563eb" : "#e5e7eb",
-    background: active ? "#eff6ff" : "#fff",
-    color: active ? "#1d4ed8" : "#111",
-    cursor: "pointer",
-    fontSize: 13,
-  };
-}
-
-export default function Tasks(){
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  // filters (simple)
-  const [priority, setPriority] = useState<string>('')     // '', 'red', 'amber', 'green'
-  const [status, setStatus] = useState<string>('')         // '', 'new', ...
-  const [assignee, setAssignee] = useState<string>('')     // exact match
-  const [overdue, setOverdue] = useState<boolean>(false)
-  const [q, setQ] = useState<string>('')
+  // filters
+  const [priority, setPriority] = useState("");
+  const [status, setStatus] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [overdue, setOverdue] = useState(false);
+  const [q, setQ] = useState("");
 
   // site/unit filters
-  const [sites, setSites] = useState<{id:number;name:string}[]>([])
-  const [units, setUnits] = useState<{id:number;site_id:number;name:string}[]>([])
-  const [siteId, setSiteId] = useState<number | ''>('')   // <-- single source of truth
-  const [unitId, setUnitId] = useState<number | ''>('')
+  const [sites, setSites] = useState<SiteRef[]>([]);
+  const [units, setUnits] = useState<UnitRef[]>([]);
+  const [siteId, setSiteId] = useState<number | "">("");
+  const [unitId, setUnitId] = useState<number | "">("");
+
+  const location = useLocation();
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const s of STATUS_OPTIONS) counts[s] = 0;
-    for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
+    for (const t of tasks)
+      counts[t.status] = (counts[t.status] ?? 0) + 1;
     return counts;
   }, [tasks]);
 
-  const location = useLocation();
-
-  // build query string
   const qs = useMemo(() => {
-    const p = new URLSearchParams()
-    if (priority) p.set('priority', priority)
-    if (status) p.set('status', status)
-    if (assignee) p.set('assignee', assignee)
-    if (siteId !== '') p.set('site_id', String(siteId))
-    if (unitId !== '') p.set('unit_id', String(unitId))
-    if (overdue) p.set('overdue', 'true')
-    if (q) p.set('q', q)
-    const s = p.toString()
-    return s ? `?${s}` : ''
-  }, [priority, status, assignee, siteId, unitId, overdue, q])
+    const p = new URLSearchParams();
+    if (priority) p.set("priority", priority);
+    if (status) p.set("status", status);
+    if (assignee) p.set("assignee", assignee);
+    if (siteId !== "") p.set("site_id", String(siteId));
+    if (unitId !== "") p.set("unit_id", String(unitId));
+    if (overdue) p.set("overdue", "true");
+    if (q) p.set("q", q);
+    const s = p.toString();
+    return s ? `?${s}` : "";
+  }, [priority, status, assignee, siteId, unitId, overdue, q]);
 
   const load = async () => {
-    setLoading(true); setErr(null)
+    setLoading(true);
+    setErr(null);
     try {
-      const r = await api.get('tasks' + qs)
-      setTasks(r.data)
-    } catch (e:any) {
-      setErr(e?.message || 'Failed to load tasks')
+      const data = await listTasksByQuery(qs);
+      setTasks(data);
+    } catch (e: any) {
+      setErr(e?.message || "Failed to load tasks");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(()=>{ load() }, [qs])
+  useEffect(() => {
+    load();
+  }, [qs]);
 
-  // load sites once (use trailing slash to avoid 307)
+  // load sites
   useEffect(() => {
     (async () => {
-      const r = await api.get("sites")
-      setSites(r.data)
-    })()
-  }, [])
-
-  // when site changes, load units (and clear unit filter if site cleared)
-  useEffect(() => {
-    (async () => {
-      if (siteId !== '') {
-        const r = await api.get(`sites/${siteId}/units/`) // trailing slash
-        setUnits(r.data)
-      } else {
-        setUnits([])
-        setUnitId('')
+      try {
+        const data = await listTaskSites();
+        setSites(data);
+      } catch {
+        // ignore small filter errors
       }
-    })()
-  }, [siteId])
+    })();
+  }, []);
+
+  // load units when site changes
+  useEffect(() => {
+    (async () => {
+      if (siteId !== "") {
+        try {
+          const data = await listUnitsForSite(siteId as number);
+          setUnits(data);
+        } catch {
+          setUnits([]);
+        }
+      } else {
+        setUnits([]);
+        setUnitId("");
+      }
+    })();
+  }, [siteId]);
+
+  const clearFilters = () => {
+    setPriority("");
+    setStatus("");
+    setAssignee("");
+    setSiteId("");
+    setUnitId("");
+    setOverdue(false);
+    setQ("");
+  };
 
   return (
-    <div>
-      {/* Filters */}
-      <div style={{ display:'grid', gap:8, marginBottom:12 }}>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
-          <select value={priority} onChange={e=>setPriority(e.target.value)}>
-            <option value="">Priority (all)</option>
-            <option value="red">Red</option>
-            <option value="amber">Amber</option>
-            <option value="green">Green</option>
-          </select>
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Tasks
+            </h1>
+            <p className="text-sm text-slate-500">
+              Filter and manage maintenance tasks.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setOpen(true)}>
+            + New Task
+          </Button>
+        </header>
 
-          {/* Status chips */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-            <button type="button" onClick={() => setStatus('')} style={chipStyle(status === '')} title="Show all statuses">All</button>
-            {STATUS_OPTIONS.map(s => (
-              <button key={s} type="button" onClick={() => setStatus(s)} style={chipStyle(status === s)} title={s.replace('_', ' ')}>
-                {s.replace('_',' ')} ({statusCounts[s]})
+        {/* Filters */}
+        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+            >
+              <option value="">Priority (all)</option>
+              <option value="red">Red</option>
+              <option value="amber">Amber</option>
+              <option value="green">Green</option>
+            </select>
+
+            {/* Status chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setStatus("")}
+                className={chipClass(status === "")}
+              >
+                All ({tasks.length})
               </button>
-            ))}
+              {STATUS_OPTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={chipClass(status === s)}
+                >
+                  {s.replace("_", " ")} ({statusCounts[s]})
+                </button>
+              ))}
+            </div>
           </div>
 
-          <input placeholder="Assignee" value={assignee} onChange={e=>setAssignee(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              placeholder="Assignee"
+              className="h-9 w-40"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+            />
 
-          {/* Site + Unit selectors */}
-          <select value={String(siteId)} onChange={e => setSiteId(e.target.value ? Number(e.target.value) : '')}>
-            <option value="">All sites</option>
-            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+            <select
+              className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm"
+              value={String(siteId)}
+              onChange={(e) =>
+                setSiteId(
+                  e.target.value ? Number(e.target.value) : ""
+                )
+              }
+            >
+              <option value="">All sites</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
 
-          <select value={String(unitId)} onChange={e => setUnitId(e.target.value ? Number(e.target.value) : '')} disabled={siteId === ''}>
-            <option value="">{siteId === '' ? "Select site first" : "All units"}</option>
-            {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
+            <select
+              className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm"
+              value={String(unitId)}
+              onChange={(e) =>
+                setUnitId(
+                  e.target.value ? Number(e.target.value) : ""
+                )
+              }
+              disabled={siteId === ""}
+            >
+              <option value="">
+                {siteId === "" ? "Select site first" : "All units"}
+              </option>
+              {units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
 
-          <label style={{ display:'inline-flex', alignItems:'center', gap:6 }}>
-            <input type="checkbox" checked={overdue} onChange={e=>setOverdue(e.target.checked)} />
-            Overdue
-          </label>
+            <label className="inline-flex items-center gap-1 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={overdue}
+                onChange={(e) => setOverdue(e.target.checked)}
+              />
+              Overdue
+            </label>
 
-          <input placeholder="Search title/desc" value={q} onChange={e=>setQ(e.target.value)} style={{ flex:1, minWidth:160 }} />
+            <Input
+              placeholder="Search title/desc"
+              className="h-9 flex-1 min-w-[160px]"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
 
-          <div style={{ marginLeft:'auto' }}>
-            <button onClick={()=>setOpen(true)}>+ New Task</button>
+            {(priority ||
+              status ||
+              assignee ||
+              siteId !== "" ||
+              unitId !== "" ||
+              overdue ||
+              q) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         </div>
 
-        {(priority||status||assignee||(siteId!=='')||(unitId!=='')||overdue||q) && (
-          <div>
-            <button onClick={() => {
-              setPriority(''); setStatus(''); setAssignee('');
-              setSiteId(''); setUnitId('');
-              setOverdue(false); setQ('');
-            }}>
-              Clear filters
-            </button>
+        {loading && (
+          <div className="text-sm text-slate-500">Loading…</div>
+        )}
+        {err && <div className="text-sm text-red-600">{err}</div>}
+        {!loading && tasks.length === 0 && (
+          <div className="text-sm text-slate-500">
+            No tasks match.
           </div>
         )}
+
+        {/* Task list */}
+        <div className="space-y-2">
+          {tasks.map((t) => (
+            <Link
+              key={t.id}
+              to={`/tasks/${t.id}`}
+              state={{ from: location.pathname + location.search }}
+              className="block rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm no-underline hover:border-slate-300"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full ${
+                      t.priority === "red"
+                        ? "bg-red-600"
+                        : t.priority === "amber"
+                        ? "bg-amber-500"
+                        : "bg-green-600"
+                    }`}
+                  />
+                  <span className="truncate font-medium">
+                    {t.title}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-500">
+                  {t.assignee ? `@${t.assignee}` : ""}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                <span className="capitalize">
+                  {t.status.replace("_", " ")}
+                </span>
+                <span>
+                  {t.due_at
+                    ? new Date(t.due_at).toLocaleString()
+                    : "No due date"}
+                </span>
+                {isOverdue(t) && (
+                  <span className="font-medium text-red-600">
+                    Overdue
+                  </span>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <NewTaskModal
+          open={open}
+          onClose={() => setOpen(false)}
+          onCreated={() => load()}
+        />
       </div>
-
-      {loading && <div>Loading…</div>}
-      {err && <div style={{ color:'#b91c1c' }}>{err}</div>}
-      {!loading && tasks.length === 0 && <div>No tasks match.</div>}
-
-      {tasks.map(t=> (
-        <Link key={t.id} to={`/tasks/${t.id}`} state={{ from: location.pathname + location.search }} style={{ display:'block', padding:12, border:'1px solid #eee', borderRadius:8, marginBottom:8, textDecoration:'none', color:'#111' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
-            <div style={{ fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              <span style={{
-                display:'inline-block', width:8, height:8, borderRadius:999,
-                background: t.priority==='red' ? '#dc2626' : t.priority==='amber' ? '#f59e0b' : '#16a34a',
-                marginRight:8
-              }} />
-              {t.title}
-            </div>
-            <small style={{ color:'#555' }}>
-              {t.assignee ? `@${t.assignee}` : ''}
-            </small>
-          </div>
-          <div style={{ fontSize:12, color:'#555', display:'flex', justifyContent:'space-between' }}>
-            <span>{t.status}</span>
-            {t.due_at ? new Date(t.due_at).toLocaleString() : 'No due'}
-            {isOverdue(t) && <span style={{ color:'#dc2626' }}>Overdue</span>}
-          </div>
-        </Link>
-      ))}
-
-      <NewTaskModal open={open} onClose={()=>setOpen(false)} onCreated={()=>load()} />
     </div>
-  )
+  );
 }
 
-function isOverdue(t: Task){
-  if (!t.due_at) return false
-  if (t.status === 'done' || t.status === 'cancelled') return false
-  return new Date(t.due_at).getTime() < Date.now()
+function isOverdue(t: Task) {
+  if (!t.due_at) return false;
+  if (t.status === "done" || t.status === "cancelled") return false;
+  return new Date(t.due_at).getTime() < Date.now();
 }

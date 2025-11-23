@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
+import "./index.css"
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import TaskDetail from "./pages/TaskDetail";
@@ -9,7 +10,7 @@ import Inventory from "./pages/Inventory";
 import Sites from "./pages/Sites";
 import SiteDetail from "./pages/SiteDetail";
 import Units from "./pages/Units";
-import Maintenance from "@/pages/Maintenance";
+import Maintenance from "./pages/Maintenance";
 
 const router = createBrowserRouter([
   {

@@ -1,55 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../lib/api";
 
-type Site = {
-  id: number;
-  name: string;
-  address?: string | null;
-  notes?: string | null;
-  units?: number | null;
-};
+import {
+  listSites,
+  createSite,
+  updateSite,
+  deleteSite,
+  type Site,
+} from "../services/sites";
 
-// --- tiny design tokens (no CSS framework) ---
-const C = {
-  text: "#0f172a",            // slate-900
-  textSub: "#475569",         // slate-600
-  textMuted: "#64748b",       // slate-500
-  border: "#e2e8f0",          // slate-200
-  bgCard: "#ffffff",
-  bgPage: "#ffffff",
-  danger: "#b91c1c",
-  primary: "#1d4ed8",
-  primaryBg: "#eff6ff",
-};
-
-const pageWrap: React.CSSProperties = { maxWidth: 1000, margin: "0 auto", padding: "20px 16px 40px" };
-const h1Style: React.CSSProperties = { margin: "6px 0 4px", fontSize: 28, fontWeight: 700, color: C.text };
-const pLead: React.CSSProperties = { margin: 0, color: C.textMuted };
-
-const toolbar: React.CSSProperties = { display: "flex", gap: 10, alignItems: "center", marginTop: 16 };
-const btn: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, background: "#fff", cursor: "pointer" };
-const btnPrimary: React.CSSProperties = { ...btn, background: C.primary, color: "#fff", borderColor: C.primary };
-const input: React.CSSProperties = { height: 36, padding: "0 10px", borderRadius: 8, border: `1px solid ${C.border}`, outline: "none", flex: 1, minWidth: 260 };
-
-const card: React.CSSProperties = {
-  border: `1px solid ${C.border}`,
-  borderRadius: 12,
-  background: C.bgCard,
-  padding: 14,
-  display: "grid",
-  gap: 6,
-};
-
-const rowTop: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 };
-const nameStyle: React.CSSProperties = { fontWeight: 600, color: C.text };
-const addrStyle: React.CSSProperties = { color: C.textSub };
-const metaStyle: React.CSSProperties = { color: C.textMuted, fontSize: 12 };
-
-const btnRow: React.CSSProperties = { display: "flex", gap: 8 };
-const btnDanger: React.CSSProperties = { ...btn, color: C.danger, borderColor: "#fecaca", background: "#fff5f5" };
-
-
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Label } from "../components/ui/label";
 
 export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
@@ -57,38 +26,45 @@ export default function SitesPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const navigate = useNavigate();
-
-  // modal state
   const [editing, setEditing] = useState<Partial<Site> | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Site | null>(null);
 
-  // ---- data ----
+  const navigate = useNavigate();
+
   const loadSites = async () => {
     setLoading(true);
     setErr(null);
     try {
-      const r = await api.get<Site[]>("sites"); // trailing slash avoids 307
-      setSites(r.data);
+      const data = await listSites();
+      setSites(data);
     } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load sites");
+      setErr(
+        e?.response?.data?.detail ??
+          e?.message ??
+          "Failed to load sites"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadSites(); }, []);
+  useEffect(() => {
+    loadSites();
+  }, []);
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     if (!t) return sites;
     return sites.filter((s) =>
-      [s.name, s.address ?? "", s.notes ?? ""].some((v) => v.toLowerCase().includes(t))
+      [s.name, s.address ?? "", s.notes ?? ""].some((v) =>
+        v.toLowerCase().includes(t)
+      )
     );
   }, [q, sites]);
 
-  // ---- CRUD helpers ----
-  const startNew = () => setEditing({ name: "", address: "", notes: "", units: null });
+  const startNew = () =>
+    setEditing({ name: "", address: "", notes: "", units: null });
+
   const startEdit = (s: Site) => setEditing({ ...s });
 
   const saveSite = async () => {
@@ -97,96 +73,240 @@ export default function SitesPage() {
       name: editing.name!.trim(),
       address: (editing.address ?? "").toString().trim() || null,
       notes: (editing.notes ?? "").toString().trim() || null,
-      units: editing.units === null || editing.units === undefined ? null : Number(editing.units),
+      units:
+        editing.units === null || editing.units === undefined
+          ? null
+          : Number(editing.units),
     };
-    if (editing.id) {
-      await api.put(`sites/${editing.id}`, payload);
-    } else {
-      await api.post(`sites`, payload);
+
+    try {
+      if (editing.id) {
+        await updateSite(editing.id, payload);
+      } else {
+        await createSite(payload);
+      }
+      setEditing(null);
+      await loadSites();
+    } catch (e: any) {
+      setErr(
+        e?.response?.data?.detail ??
+          e?.message ??
+          "Failed to save site"
+      );
     }
-    setEditing(null);
-    await loadSites();
-    alert("Saved ✔");
   };
 
-  const deleteSite = async (s: Site) => {
-    if (!confirm(`Delete "${s.name}"?`)) return;
-    await api.delete(`sites/${s.id}`);
-    await loadSites();
-    alert("Deleted ✔");
+  const handleDeleteSite = async (s: Site) => {
+    try {
+      await deleteSite(s.id);
+      await loadSites();
+      setConfirmDelete(null);
+    } catch (e: any) {
+      setErr(
+        e?.response?.data?.detail ??
+          e?.message ??
+          "Failed to delete site"
+      );
+    }
   };
 
-  // ---- UI ----
   return (
-    <div style={{ background: C.bgPage, minHeight: "100vh" }}>
-      <div style={pageWrap}>
-        <div>
-          <h1 style={h1Style}>Sites</h1>
-          <p style={pLead}>Manage properties/locations for your rentals.</p>
-        </div>
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6">
+        {/* Header */}
+        <header className="space-y-1">
+          <h1 className="text-2xl font-semibold text-slate-900">Sites</h1>
+          <p className="text-sm text-slate-500">
+            Manage properties / locations for your rentals.
+          </p>
+        </header>
 
-        <div style={toolbar}>
-          <button onClick={startNew} style={btnPrimary}>+ New Site</button>
-          <input
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={startNew} className="h-9 px-3">
+            + New Site
+          </Button>
+
+          <Input
+            className="h-9 w-full max-w-md"
             placeholder="Search by name, address, or notes…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            style={input}
           />
-          {loading && <span style={{ color: C.textMuted }}>Loading…</span>}
-          {err && <span style={{ color: C.danger }}>{err}</span>}
+
+          {loading && (
+            <span className="text-xs text-slate-500">Loading…</span>
+          )}
+          {err && <span className="text-xs text-red-600">{err}</span>}
         </div>
 
-        <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+        {/* List */}
+        <div className="grid gap-3">
           {filtered.map((s) => (
-            <div key={s.id} style={card}>
-              <div style={rowTop}>
-                <div style={nameStyle}>{s.name}</div>
-                <div style={btnRow}>
-                  <button onClick={() => startEdit(s)} style={btn}>Edit</button>
-                  <button onClick={() => setConfirmDelete(s)} style={btnDanger}>Delete</button>
-                  <button onClick={() => navigate({ pathname: "/units", search: `?site_id=${s.id}` })} style={btn}>Manage units</button>
+            <Card key={s.id} className="border-slate-200">
+              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                <div>
+                  <CardTitle className="text-base font-semibold text-slate-900">
+                    {s.name}
+                  </CardTitle>
+                  {s.address && (
+                    <p className="text-sm text-slate-600">{s.address}</p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">
+                    Units: {s.units ?? "–"}
+                  </p>
                 </div>
-              </div>
-              {s.address && <div style={addrStyle}>{s.address}</div>}
-              <div style={metaStyle}>Units: {s.units ?? "–"}</div>
-              {s.notes && <div style={{ color: C.text }}>{s.notes}</div>}
-            </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => startEdit(s)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => setConfirmDelete(s)}
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigate({
+                        pathname: "/units",
+                        search: `?site_id=${s.id}`,
+                      })
+                    }
+                  >
+                    Manage units
+                  </Button>
+                </div>
+              </CardHeader>
+
+              {s.notes && (
+                <CardContent>
+                  <p className="text-sm text-slate-700">{s.notes}</p>
+                </CardContent>
+              )}
+            </Card>
           ))}
-          {!loading && filtered.length === 0 && <div style={{ color: C.textMuted }}>No sites yet.</div>}
+
+          {!loading && filtered.length === 0 && (
+            <p className="text-sm text-slate-500">No sites yet.</p>
+          )}
         </div>
       </div>
 
-      {/* create/edit modal */}
+      {/* Create / edit modal */}
       {editing && (
-        <Modal title={editing.id ? "Edit Site" : "New Site"} onClose={() => setEditing(null)}>
-          <div style={{ display: "grid", gap: 10 }}>
-            <Input label="Name" value={editing.name ?? ""} onChange={(v) => setEditing((s) => ({ ...s!, name: v }))} />
-            <Input label="Address" value={editing.address ?? ""} onChange={(v) => setEditing((s) => ({ ...s!, address: v }))} />
-            <Input
-              label="Units (optional)"
-              value={editing.units ?? ""}
-              onChange={(v) => setEditing((s) => ({ ...s!, units: v === "" ? null : Number(String(v).replace(/[^0-9]/g, "")) }))}
-              inputMode="numeric"
-            />
-            <Textarea label="Notes" rows={4} value={editing.notes ?? ""} onChange={(v) => setEditing((s) => ({ ...s!, notes: v }))} />
+        <Modal
+          title={editing.id ? "Edit Site" : "New Site"}
+          onClose={() => setEditing(null)}
+        >
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-slate-500">
+                Name
+              </Label>
+              <Input
+                value={editing.name ?? ""}
+                onChange={(e) =>
+                  setEditing((s) => ({ ...s!, name: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-slate-500">
+                Address
+              </Label>
+              <Input
+                value={editing.address ?? ""}
+                onChange={(e) =>
+                  setEditing((s) => ({ ...s!, address: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-slate-500">
+                Units (optional)
+              </Label>
+              <Input
+                inputMode="numeric"
+                value={editing.units ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const cleaned = v.replace(/[^0-9]/g, "");
+                  setEditing((s) => ({
+                    ...s!,
+                    units: cleaned === "" ? null : Number(cleaned),
+                  }));
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs uppercase text-slate-500">
+                Notes
+              </Label>
+              <Textarea
+                rows={4}
+                value={editing.notes ?? ""}
+                onChange={(e) =>
+                  setEditing((s) => ({ ...s!, notes: e.target.value }))
+                }
+              />
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-            <button onClick={() => setEditing(null)} style={btn}>Cancel</button>
-            <button onClick={saveSite} style={btnPrimary} disabled={!editing.name?.trim()}>Save</button>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={saveSite}
+              disabled={!editing.name?.trim()}
+            >
+              Save
+            </Button>
           </div>
         </Modal>
       )}
 
-      {/* delete confirm modal */}
+      {/* Delete confirm */}
       {confirmDelete && (
-        <Modal title="Delete Site" onClose={() => setConfirmDelete(null)}>
-          <div style={{ color: C.text }}>Delete “{confirmDelete.name}” and all associated data?</div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-            <button onClick={() => setConfirmDelete(null)} style={btn}>Cancel</button>
-            <button onClick={() => { deleteSite(confirmDelete); setConfirmDelete(null); }} style={btnDanger}>
+        <Modal
+          title="Delete Site"
+          onClose={() => setConfirmDelete(null)}
+        >
+          <p className="text-sm text-slate-800">
+            Delete “{confirmDelete.name}” and all associated data?
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={() => handleDeleteSite(confirmDelete)}
+            >
               Delete
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
@@ -194,47 +314,26 @@ export default function SitesPage() {
   );
 }
 
-// --- tiny input/textarea primitives (matching spacing/colors) ---
-function Input({
-  label, value, onChange, inputMode,
-}: { label: string; value: string | number; onChange: (v: string) => void; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"] }) {
+// simple modal shell (keeps behaviour but looks nicer)
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
   return (
-    <label style={{ display: "grid", gap: 6 }}>
-      <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
-      <input
-        style={{ ...input, minWidth: 0, width: "100%" }}
-        value={value as any}
-        onChange={(e) => onChange(e.target.value)}
-        inputMode={inputMode}
-      />
-    </label>
-  );
-}
-
-function Textarea({
-  label, rows = 4, value, onChange,
-}: { label: string; rows?: number; value: string; onChange: (v: string) => void }) {
-  return (
-    <label style={{ display: "grid", gap: 6 }}>
-      <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
-      <textarea
-        rows={rows}
-        style={{ ...input, minHeight: rows * 22, paddingTop: 8, paddingBottom: 8, resize: "vertical" }}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </label>
-  );
-}
-
-// --- simple modal ---
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(2,6,23,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 1000 }}>
-      <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, width: "min(560px, 96vw)", boxShadow: "0 10px 30px rgba(0,0,0,.12)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <h3 style={{ margin: 0, fontSize: 18, color: C.text }}>{title}</h3>
-          <button onClick={onClose} style={{ ...btn, padding: "6px 10px" }}>Close</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h3 className="text-base font-semibold text-slate-900">
+            {title}
+          </h3>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
+          </Button>
         </div>
         {children}
       </div>

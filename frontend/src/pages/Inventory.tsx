@@ -1,10 +1,34 @@
+// Inventory.tsx — service-based version
 import { useEffect, useMemo, useState } from "react";
-import api from "../lib/api";
 
-type Item = { id: number; sku: string; name: string; category?: string | null; uom: string; notes?: string | null };
-type Stock = { id: number; site_id: number; item_id: number; quantity: number; min_level_override?: number | null; updated_at: string };
-type MovementReason = "usage" | "delivery" | "adjustment" | "transfer";
-type Site = { id: number; name: string };
+import {
+  listItems,
+  createItem,
+  updateItem,
+  deleteItem,
+  listInventorySites,
+  getStockForSite,
+  upsertStock,
+  moveStock,
+  type Item,
+  type Stock,
+  type MovementReason,
+} from "../services/inventory";
+
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Label } from "../components/ui/label";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 
 export default function Inventory() {
   // items
@@ -13,233 +37,471 @@ export default function Inventory() {
   const filteredItems = useMemo(() => {
     const k = iq.trim().toLowerCase();
     if (!k) return items;
-    return items.filter(i => i.name.toLowerCase().includes(k) || i.sku.toLowerCase().includes(k));
+    return items.filter(
+      (i) =>
+        i.name.toLowerCase().includes(k) ||
+        i.sku.toLowerCase().includes(k) ||
+        (i.category ?? "").toLowerCase().includes(k)
+    );
   }, [items, iq]);
 
-  // sites
-  const [sites, setSites] = useState<Site[]>([]);
+  // sites + stock
+  const [sites, setSites] = useState<{ id: number; name: string }[]>([]);
   const [siteId, setSiteId] = useState<number | "">("");
-
-  // stock
   const [stock, setStock] = useState<Stock[]>([]);
+
+  // ui
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  // item edit modal
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
-
-  // movement modal
   const [moveFor, setMoveFor] = useState<Stock | null>(null);
   const [delta, setDelta] = useState<number>(0);
   const [reason, setReason] = useState<MovementReason>("usage");
-  const [reference, setReference] = useState<string>("");
+  const [reference, setReference] = useState("");
 
-  const loadItems = async () => {
-    try { const r = await api.get("inventory/items"); setItems(r.data); }
-    catch (e: any) { setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load items"); }
-  };
-  const loadSites = async () => {
-    try { const r = await api.get("sites/"); setSites(r.data); } // NOTE: trailing slash
-    catch { /* ignore */ }
-  };
-  const loadStock = async (sid: number) => {
-    setLoading(true); setErr(null);
-    try {
-      const r = await api.get(`inventory/stock?site_id=${sid}`);
-      setStock(r.data);
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to load stock");
-    } finally { setLoading(false); }
-  };
+  // load items + sites
+  useEffect(() => {
+    (async () => {
+      try {
+        const it = await listItems();
+        setItems(it);
+        const st = await listInventorySites();
+        setSites(st);
+      } catch (e: any) {
+        setErr(e?.message ?? "Failed to load data");
+      }
+    })();
+  }, []);
 
-  useEffect(() => { loadItems(); loadSites(); }, []);
-  useEffect(() => { if (siteId) loadStock(siteId as number); }, [siteId]);
+  // load stock
+  useEffect(() => {
+    if (siteId) {
+      (async () => {
+        setLoading(true);
+        setErr(null);
+        try {
+          const st = await getStockForSite(siteId as number);
+          setStock(st);
+        } catch (e: any) {
+          setErr(e?.message ?? "Failed to load stock");
+        } finally {
+          setLoading(false);
+        }
+      })();
+    } else {
+      setStock([]);
+    }
+  }, [siteId]);
 
-  // items CRUD
-  const startNewItem = () => setEditing({ name: "", sku: "", uom: "pcs", category: "", notes: "" });
+  // ----- ITEM CRUD -----
+
+  const startNewItem = () =>
+    setEditing({
+      name: "",
+      sku: "",
+      uom: "pcs",
+      category: "",
+      notes: "",
+    });
+
   const startEditItem = (it: Item) => setEditing({ ...it });
 
   const saveItem = async () => {
     if (!editing?.name?.trim() || !editing?.sku?.trim()) return;
     try {
+      const payload = {
+        name: editing.name!,
+        sku: editing.sku!,
+        uom: editing.uom!,
+        category: editing.category ?? null,
+        notes: editing.notes ?? null,
+      };
+
       if (editing.id) {
-        await api.put(`inventory/items/${editing.id}`, {
-          name: editing.name, sku: editing.sku, uom: editing.uom,
-          category: editing.category ?? null, notes: editing.notes ?? null
-        });
+        await updateItem(editing.id, payload);
       } else {
-        await api.post(`inventory/items`, {
-          name: editing.name, sku: editing.sku, uom: editing.uom,
-          category: editing.category ?? null, notes: editing.notes ?? null
-        });
+        await createItem(payload);
       }
+
       setEditing(null);
-      await loadItems();
-      if (siteId) await loadStock(siteId as number);
+
+      const it = await listItems();
+      setItems(it);
+      if (siteId) {
+        const st = await getStockForSite(siteId as number);
+        setStock(st);
+      }
     } catch (e: any) {
-      setErr(e?.response?.data?.detail ?? e?.message ?? "Failed to save item");
+      setErr(e?.message ?? "Failed to save item");
     }
   };
 
-  const deleteItem = async (id: number) => {
-    if (!confirm("Delete this item?")) return;
-    await api.delete(`inventory/items/${id}`);
-    await loadItems();
-    if (siteId) await loadStock(siteId as number);
+  const handleDeleteItem = async (id: number) => {
+    if (!window.confirm("Delete this item?")) return;
+    await deleteItem(id);
+    const it = await listItems();
+    setItems(it);
+    if (siteId) {
+      const st = await getStockForSite(siteId as number);
+      setStock(st);
+    }
   };
 
-  // stock upsert
+  // ----- STOCK -----
+
   const setQty = async (itemId: number, qty: number) => {
     if (!siteId) return;
-    await api.post(`inventory/stock/upsert`, { site_id: siteId, item_id: itemId, quantity: qty });
-    await loadStock(siteId as number);
+    await upsertStock(siteId as number, itemId, qty);
+    const st = await getStockForSite(siteId as number);
+    setStock(st);
   };
 
-  // movement
-  const openMove = (s: Stock) => { setMoveFor(s); setDelta(0); setReason("usage"); setReference(""); };
-  const saveMove = async () => {
-    if (!moveFor || !siteId || !delta) { setMoveFor(null); return; }
-    await api.post(`inventory/stock/${moveFor.id}/move`, { delta, reason, reference, author: "web" });
-    setMoveFor(null);
-    await loadStock(siteId as number);
+  const openMove = (s: Stock) => {
+    setMoveFor(s);
+    setDelta(0);
+    setReason("usage");
+    setReference("");
   };
+
+  const saveMove = async () => {
+    if (!moveFor || !delta) {
+      setMoveFor(null);
+      return;
+    }
+    await moveStock(moveFor.id, delta, reason, reference);
+    setMoveFor(null);
+
+    if (siteId) {
+      const st = await getStockForSite(siteId as number);
+      setStock(st);
+    }
+  };
+
+  const stockForItem = (itemId: number) =>
+    stock.find((s) => s.item_id === itemId);
+
+  // UI ------------------------------------------------------------------------------------------------
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      {/* Items */}
-      <div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-          <input placeholder="Search items (name/sku)" value={iq} onChange={e => setIq(e.target.value)} />
-          <button onClick={startNewItem}>+ New Item</button>
-          {err && <div style={{ color: "#b91c1c" }}>{err}</div>}
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
+        <h1 className="text-2xl font-semibold text-slate-900">Inventory</h1>
+        <p className="text-sm text-slate-500">
+          Manage inventory items and per-site stock.
+        </p>
+
+        {err && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {err}
+          </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* ITEMS */}
+          <Card className="border-slate-200 shadow-md">
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Search items"
+                  value={iq}
+                  onChange={(e) => setIq(e.target.value)}
+                  className="h-9 max-w-xs"
+                />
+                <div className="flex-1" />
+                <Button size="sm" onClick={startNewItem}>
+                  + New Item
+                </Button>
+              </div>
+
+              <div className="rounded-lg border border-slate-200">
+                <div className="grid grid-cols-[1.2fr,0.8fr,0.7fr,0.7fr,auto] gap-2 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase text-slate-500">
+                  <div>Name</div>
+                  <div>SKU</div>
+                  <div>Category</div>
+                  <div>UoM</div>
+                  <div className="text-right">Actions</div>
+                </div>
+
+                <div className="max-h-[460px] overflow-auto divide-y divide-slate-100 text-sm">
+                  {filteredItems.length === 0 && (
+                    <div className="px-3 py-3 text-sm text-slate-500">
+                      No items found.
+                    </div>
+                  )}
+
+                  {filteredItems.map((it) => (
+                    <div
+                      key={it.id}
+                      className="grid grid-cols-[1.2fr,0.8fr,0.7fr,0.7fr,auto] items-center gap-2 px-3 py-2 hover:bg-slate-50"
+                    >
+                      <div className="truncate">{it.name}</div>
+                      <div className="truncate text-slate-700">{it.sku}</div>
+                      <div className="truncate text-slate-600">
+                        {it.category || <span className="text-slate-400">—</span>}
+                      </div>
+                      <div className="text-slate-700">{it.uom}</div>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => startEditItem(it)}
+                        >
+                          Edit
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-red-600"
+                          onClick={() => handleDeleteItem(it.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* STOCK */}
+          <Card className="border-slate-200 shadow-md">
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-slate-500">Site</Label>
+                <select
+                  className="h-9 min-w-[180px] rounded-md border border-slate-300 bg-white px-3 text-sm"
+                  value={String(siteId)}
+                  onChange={(e) => setSiteId(e.target.value ? Number(e.target.value) : "")}
+                >
+                  <option value="">Select site…</option>
+                  {sites.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+
+                {siteId && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-3"
+                    onClick={() => siteId && getStockForSite(siteId).then(setStock)}
+                  >
+                    Refresh
+                  </Button>
+                )}
+
+                {loading && (
+                  <span className="text-xs text-slate-500">Loading…</span>
+                )}
+              </div>
+
+              {siteId ? (
+                <div className="rounded-lg border border-slate-200">
+                  <div className="grid grid-cols-[1.4fr,0.6fr,0.9fr,auto] gap-2 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase text-slate-500">
+                    <div>Item</div>
+                    <div>On hand</div>
+                    <div>Set quantity</div>
+                    <div className="text-right">Move / Save</div>
+                  </div>
+
+                  <div className="max-h-[460px] divide-y divide-slate-100 overflow-auto text-sm">
+                    {items.map((it) => {
+                      const st = stockForItem(it.id);
+                      return (
+                        <StockRow
+                          key={it.id}
+                          item={it}
+                          stock={st}
+                          onSaveQty={(qty) => setQty(it.id, qty)}
+                          onMove={() => st && openMove(st)}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                  Select a site to view stock.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        <div style={{ border: "1px solid #eee", borderRadius: 8 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 80px 120px", padding: "6px 8px", background: "#f8fafc", borderBottom: "1px solid #eee", fontSize: 12, color: "#555" }}>
-            <div>Name</div><div>SKU</div><div>UoM</div><div />
-          </div>
-          {filteredItems.map(it => (
-            <div key={it.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 80px 120px", padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
-              <div title={it.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.name}</div>
-              <div>{it.sku}</div>
-              <div>{it.uom}</div>
-              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                <button onClick={() => startEditItem(it)}>Edit</button>
-                <button onClick={() => deleteItem(it.id)} style={{ color: "#b91c1c" }}>Delete</button>
+        {/* ITEM EDIT DIALOG */}
+        <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editing?.id ? "Edit item" : "New item"}</DialogTitle>
+              <DialogDescription>Manage catalogue items</DialogDescription>
+            </DialogHeader>
+
+            {editing && (
+              <div className="mt-4 space-y-3">
+                <div className="grid gap-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={editing.name ?? ""}
+                    onChange={(e) =>
+                      setEditing((s) => ({ ...(s as Item), name: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>SKU</Label>
+                  <Input
+                    value={editing.sku ?? ""}
+                    onChange={(e) =>
+                      setEditing((s) => ({ ...(s as Item), sku: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label>UoM</Label>
+                    <Input
+                      value={editing.uom ?? "pcs"}
+                      onChange={(e) =>
+                        setEditing((s) => ({ ...(s as Item), uom: e.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Category</Label>
+                    <Input
+                      value={editing.category ?? ""}
+                      onChange={(e) =>
+                        setEditing((s) => ({ ...(s as Item), category: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    rows={3}
+                    value={editing.notes ?? ""}
+                    onChange={(e) =>
+                      setEditing((s) => ({ ...(s as Item), notes: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditing(null)}>
+                Cancel
+              </Button>
+              <Button onClick={saveItem}>Save</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* MOVE STOCK */}
+        <Dialog open={!!moveFor} onOpenChange={(o) => !o && setMoveFor(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Move stock</DialogTitle>
+              <DialogDescription>Record usage, delivery or adjustments</DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-3">
+              <div className="grid gap-2">
+                <Label>Delta</Label>
+                <Input
+                  type="number"
+                  value={delta}
+                  onChange={(e) => setDelta(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Reason</Label>
+                <select
+                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value as MovementReason)}
+                >
+                  <option value="usage">Usage</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="adjustment">Adjustment</option>
+                  <option value="transfer">Transfer</option>
+                </select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Reference</Label>
+                <Input value={reference} onChange={(e) => setReference(e.target.value)} />
               </div>
             </div>
-          ))}
-          {filteredItems.length === 0 && <div style={{ padding: 8 }}>No items.</div>}
-        </div>
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setMoveFor(null)}>
+                Cancel
+              </Button>
+              <Button disabled={!delta} onClick={saveMove}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Stock */}
-      <div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-          <select value={String(siteId)} onChange={e => setSiteId(e.target.value ? Number(e.target.value) : "")}>
-            <option value="">Select site…</option>
-            {sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          {loading && <span>Loading…</span>}
-        </div>
-
-        {siteId ? (
-          <div style={{ border: "1px solid #eee", borderRadius: 8 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 180px 120px", padding: "6px 8px", background: "#f8fafc", borderBottom: "1px solid #eee", fontSize: 12, color: "#555" }}>
-              <div>Item</div><div>Qty</div><div>Set Quantity</div><div />
-            </div>
-            {items.map(it => {
-              const st = stock.find(s => s.item_id === it.id);
-              return (
-                <StockRow
-                  key={it.id}
-                  item={it}
-                  stock={st}
-                  onSaveQty={(qty) => setQty(it.id, qty)}
-                  onMove={() => st && openMove(st)}
-                />
-              );
-            })}
-            {items.length === 0 && <div style={{ padding: 8 }}>No items to show.</div>}
-          </div>
-        ) : (
-          <div style={{ color: "#555" }}>Choose a site to view/edit stock.</div>
-        )}
-      </div>
-
-      {/* Item modal */}
-      {editing && (
-        <Modal title={editing.id ? "Edit Item" : "New Item"} onClose={() => setEditing(null)}>
-          <div style={{ display: "grid", gap: 8 }}>
-            <input placeholder="Name" value={editing.name ?? ""} onChange={e => setEditing(s => ({ ...s!, name: e.target.value }))} />
-            <input placeholder="SKU" value={editing.sku ?? ""} onChange={e => setEditing(s => ({ ...s!, sku: e.target.value }))} />
-            <input placeholder="UoM" value={editing.uom ?? "pcs"} onChange={e => setEditing(s => ({ ...s!, uom: e.target.value }))} />
-            <input placeholder="Category" value={editing.category ?? ""} onChange={e => setEditing(s => ({ ...s!, category: e.target.value }))} />
-            <textarea placeholder="Notes" value={editing.notes ?? ""} onChange={e => setEditing(s => ({ ...s!, notes: e.target.value }))} />
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
-            <button onClick={() => setEditing(null)}>Cancel</button>
-            <button onClick={saveItem} disabled={!editing.name?.trim() || !editing.sku?.trim()}>Save</button>
-          </div>
-        </Modal>
-      )}
-
-      {/* Movement modal */}
-      {moveFor && (
-        <Modal title="Move Stock" onClose={() => setMoveFor(null)}>
-          <div style={{ display: "grid", gap: 8 }}>
-            <div>Current qty: <b>{moveFor.quantity}</b></div>
-            <input type="number" value={delta} onChange={e => setDelta(Number(e.target.value))} placeholder="Delta (e.g., -3 or 10)" />
-            <select value={reason} onChange={e => setReason(e.target.value as MovementReason)}>
-              <option value="usage">Usage (-)</option>
-              <option value="delivery">Delivery (+)</option>
-              <option value="adjustment">Adjustment (+/-)</option>
-              <option value="transfer">Transfer</option>
-            </select>
-            <input placeholder="Reference (optional)" value={reference} onChange={e => setReference(e.target.value)} />
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 10 }}>
-            <button onClick={() => setMoveFor(null)}>Cancel</button>
-            <button onClick={saveMove} disabled={!delta}>Save</button>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
 
 function StockRow({
-  item, stock, onSaveQty, onMove,
+  item,
+  stock,
+  onSaveQty,
+  onMove,
 }: {
   item: Item;
   stock?: Stock;
-  onSaveQty: (qty: number) => Promise<void> | void;
+  onSaveQty: (qty: number) => void;
   onMove: () => void;
 }) {
-  const [qtyInput, setQtyInput] = useState<number>(stock?.quantity ?? 0);
-  useEffect(() => { setQtyInput(stock?.quantity ?? 0); }, [stock?.quantity]);
+  const [qtyInput, setQtyInput] = useState(stock?.quantity ?? 0);
+
+  useEffect(() => {
+    setQtyInput(stock?.quantity ?? 0);
+  }, [stock?.quantity]);
+
+  const under = (stock?.quantity ?? 0) <= 0;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 180px 120px", padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>
-      <div title={item.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-      <div>{stock?.quantity ?? 0}</div>
-      <div style={{ display: "flex", gap: 6 }}>
-        <input type="number" value={qtyInput} onChange={e => setQtyInput(Number(e.target.value))} style={{ width: 90 }} />
-        <button onClick={() => onSaveQty(qtyInput)}>Save</button>
+    <div className="grid grid-cols-[1.4fr,0.6fr,0.9fr,auto] items-center gap-2 px-3 py-2 text-sm">
+      <div>{item.name}</div>
+      <div className={under ? "text-red-600 font-semibold" : ""}>
+        {stock?.quantity ?? 0}
       </div>
-      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-        {stock && <button onClick={onMove}>Move</button>}
-      </div>
-    </div>
-  );
-}
 
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.2)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, zIndex: 1000 }}>
-      <div style={{ background: "#fff", border: "1px solid #eee", borderRadius: 10, padding: 16, width: "min(560px, 96vw)" }}>
-        <h3 style={{ marginTop: 0 }}>{title}</h3>
-        {children}
+      <Input
+        type="number"
+        className="h-8"
+        value={qtyInput}
+        onChange={(e) => setQtyInput(Number(e.target.value))}
+      />
+
+      <div className="flex justify-end gap-2">
+        <Button size="sm" variant="ghost" onClick={() => onSaveQty(qtyInput)}>
+          Save
+        </Button>
+        {stock && (
+          <Button size="sm" variant="ghost" onClick={onMove}>
+            Move
+          </Button>
+        )}
       </div>
     </div>
   );

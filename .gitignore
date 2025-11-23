@@ -1,0 +1,67 @@
+# -------------------------
+# Python / FastAPI backend
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.log
+*.sqlite3
+.env
+.env.*
+venv/
+.venv/
+dist/
+build/
+*.egg-info/
+coverage/
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+alembic/versions/*.old
+alembic/versions/__pycache__/
+alembic/versions/*.pyc
+alembic/*.bak
+
+# -------------------------
+# Node / Vite / React frontend
+# -------------------------
+node_modules/
+dist/
+build/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Vite stuff
+.vite/
+*.tsbuildinfo
+
+# Tailwind
+*.tailwind.css
+
+# -------------------------
+# Docker
+# -------------------------
+*.tar
+docker-compose.override.yml
+
+# -------------------------
+# OS junk
+# -------------------------
+Thumbs.db
+ehthumbs.db
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# -------------------------
+# Cloud Build / Google Cloud
+# -------------------------
+cloudbuild.yaml.old
+*.gz

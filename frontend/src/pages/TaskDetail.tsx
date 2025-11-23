@@ -1,170 +1,294 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import api from "../lib/api";
-import Comments from "../components/Comments";
-import { isoToLocal, localToISO, prettyDate } from "../lib/datetime";
 
+import TaskAttachments from "../components/TaskAttachments";
+
+import Comments from "../components/Comments";
+import {
+  isoToLocal,
+  localToISO,
+  prettyDate,
+} from "../lib/datetime";
+
+import {
+  getTask,
+  updateTaskStatus,
+  updateTaskAssignee,
+  updateTaskDue,
+  deleteTask as deleteTaskApi,
+  type TaskDetail as Task,
+} from "../services/tasks";
+
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 
 export default function TaskDetail() {
   const { id } = useParams();
   const [task, setTask] = useState<Task | null>(null);
   const [assignee, setAssignee] = useState("");
   const [dueLocal, setDueLocal] = useState("");
-  const [pending, setPending] = useState<null | "status" | "assignee" | "due">(null);
+  const [pending, setPending] =
+    useState<null | "status" | "assignee" | "due">(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const load = () =>
-    api.get(`/tasks/${id}`).then((r) => {
-      setTask(r.data);
-      setAssignee(r.data.assignee || "");
-      setDueLocal(isoToLocal(r.data.due_at));
-    });
+  const load = () => {
+    if (!id) return;
+    getTask(Number(id))
+      .then((t) => {
+        setTask(t);
+        setAssignee(t.assignee || "");
+        setDueLocal(isoToLocal(t.due_at));
+      })
+      .catch((e: any) =>
+        setErr(
+          e?.response?.data?.detail ??
+            e?.message ??
+            "Failed to load task"
+        )
+      );
+  };
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    load();
+  }, [id]);
 
-  if (!task) return <div>Loading...</div>;
+  if (!task)
+    return (
+      <div className="p-4 text-sm text-slate-500">
+        {err ?? "Loading…"}
+      </div>
+    );
 
-  // Back target: prefer the task’s own site/unit (works even if opened in new tab)
-  const backHref =
-    task?.site_id
-      ? `/tasks?site_id=${task.site_id}${task?.unit_id ? `&unit_id=${task.unit_id}` : ""}`
-      : "/tasks";
+  const backHref = task.site_id
+    ? `/tasks?site_id=${task.site_id}${
+        task.unit_id ? `&unit_id=${task.unit_id}` : ""
+      }`
+    : "/tasks";
 
-  async function update(status: string) {
-    await api.patch(`/tasks/${id}`, { status });
-    await load();
-  }
+  async function optimistic(
+    label: "status" | "assignee" | "due",
+    apply: (t: Task) => Task,
+    request: () => Promise<unknown>
+  ) {
+    if (!task) return;
+    setPending(label);
+    setErr(null);
 
-  async function saveAssignee() {
-  await optimistic("assignee",
-    d => ({ ...d, assignee: assignee || null }),
-    () => api.patch(`/tasks/${id}`, { assignee: assignee || null })
-  );
+    const prev = task;
+    const next = apply({ ...task });
+    setTask(next);
+
+    try {
+      await request();
+    } catch (e: any) {
+      setTask(prev);
+      setErr(
+        e?.response?.data?.detail ??
+          e?.message ??
+          "Update failed"
+      );
+    } finally {
+      setPending(null);
     }
+  }
 
-  async function deleteTask() {
+  const updateStatusHandler = (status: string) =>
+    optimistic(
+      "status",
+      (d) => ({ ...d, status }),
+      () => updateTaskStatus(Number(id), status)
+    );
+
+  const saveAssignee = () =>
+    optimistic(
+      "assignee",
+      (d) => ({ ...d, assignee: assignee || null }),
+      () => updateTaskAssignee(Number(id), assignee || null)
+    );
+
+  const saveDue = () =>
+    optimistic(
+      "due",
+      (d) => ({ ...d, due_at: localToISO(dueLocal) }),
+      () => updateTaskDue(Number(id), localToISO(dueLocal))
+    );
+
+  const clearDue = () =>
+    optimistic(
+      "due",
+      (d) => ({ ...d, due_at: null }),
+      () => updateTaskDue(Number(id), null)
+    );
+
+  const deleteTask = async () => {
     if (!confirm("Delete this task?")) return;
-    await api.delete(`/tasks/${id}`);
-    // plain redirect keeps things simple and avoids router hooks entirely
+    await deleteTaskApi(Number(id));
     window.location.href = backHref;
-  }
-
-  async function optimistic<T>(
-  label: "status" | "assignee" | "due",
-  apply: (draft: Task) => Task,
-  request: () => Promise<T>
-) {
-  if (!task) return;
-  setErr(null);
-  setPending(label);
-  const prev = task;
-  const next = apply({ ...task });
-  setTask(next);                    // instant UI
-  try {
-    await request();                // server commit
-  } catch (e: any) {
-    setTask(prev);                  // rollback
-    setErr(e?.response?.data?.detail || e?.message || "Update failed");
-  } finally {
-    setPending(null);
-  }
-}
+  };
 
   return (
-    <div style={{ paddingBottom: 80 }}>
-      <h3>{task.title}</h3>
-      <p>{task.description}</p>
+    <div className="min-h-screen bg-slate-50 p-4 pb-28">
+      <div className="mx-auto max-w-3xl space-y-6">
+        {/* HEADER */}
+        <Card className="border-slate-200">
+          <CardHeader className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-xl font-semibold text-slate-900">
+                {task.title}
+              </CardTitle>
+              {task.description && (
+                <p className="text-sm text-slate-600 mt-1">
+                  {task.description}
+                </p>
+              )}
+            </div>
+            <a href={backHref}>
+              <Button variant="outline" size="sm">
+                ← Back
+              </Button>
+            </a>
+          </CardHeader>
+        </Card>
 
-      {/* Back link (no router hooks needed) */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <a href={backHref}>&larr; Back</a>
-      </div>
+        {/* ASSIGNEE */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Assignee</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3">
+            <Input
+              value={assignee}
+              placeholder="Assignee (e.g. tamas)"
+              className="max-w-xs"
+              onChange={(e) => setAssignee(e.target.value)}
+            />
+            <Button
+              size="sm"
+              disabled={pending === "assignee"}
+              onClick={saveAssignee}
+            >
+              {assignee ? "Assign" : "Unassign"}
+            </Button>
+          </CardContent>
+        </Card>
 
-      {/* Assignee */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0" }}>
-        <input
-          placeholder="Assignee (e.g. tamas)"
-          value={assignee}
-          onChange={(e) => setAssignee(e.target.value)}
-        />
-        <button onClick={saveAssignee}>{assignee ? "Assign" : "Unassign"}</button>
-      </div>
+        {/* DUE DATE */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Due Date</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm">
+              <strong>Current:</strong>{" "}
+              {prettyDate(task.due_at) || "—"}
+              {isOverdue(task) && (
+                <span className="text-red-600"> · Overdue</span>
+              )}
+            </div>
 
-      {/* Due date */}
-      <div style={{ display: "grid", gap: 8, margin: "8px 0" }}>
-        <div>
-          <strong>Due:</strong> {prettyDate(task.due_at)}
-          {isOverdue(task) && <span style={{ color: "#dc2626" }}> · Overdue</span>}
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input
-            type="datetime-local"
-            value={dueLocal}
-            onChange={(e) => setDueLocal(e.target.value)}
-          />
-          <button disabled={pending==="due"} onClick={async () => {
-          await optimistic("due",
-            d => ({ ...d, due_at: localToISO(dueLocal) }),
-            () => api.patch(`/tasks/${id}`, { due_at: localToISO(dueLocal) })
-          );
-        }}>Save due date</button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                type="datetime-local"
+                value={dueLocal}
+                onChange={(e) => setDueLocal(e.target.value)}
+                className="max-w-xs"
+              />
+              <Button
+                size="sm"
+                disabled={pending === "due"}
+                onClick={saveDue}
+              >
+                Save
+              </Button>
+              {task.due_at && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pending === "due"}
+                  onClick={clearDue}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        {task.due_at && (
-          <button disabled={pending==="due"} onClick={async () => {
-            await optimistic("due",
-              d => ({ ...d, due_at: null }),
-              () => api.patch(`/tasks/${id}`, { due_at: null })
-            );
-          }}>Clear due</button>
+        {/* STATUS CONTROLS */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Status</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              disabled={pending === "status"}
+              onClick={() => updateStatusHandler("in_progress")}
+            >
+              Start
+            </Button>
+            <Button
+              size="sm"
+              disabled={pending === "status"}
+              onClick={() => updateStatusHandler("awaiting_parts")}
+            >
+              Awaiting Parts
+            </Button>
+            <Button
+              size="sm"
+              disabled={pending === "status"}
+              onClick={() => updateStatusHandler("done")}
+            >
+              Done
+            </Button>
+
+            <Button
+              size="sm"
+              className="ml-auto bg-red-600 text-white hover:bg-red-700"
+              onClick={deleteTask}
+            >
+              Delete Task
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* COMMENTS */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="text-base">Comments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Comments taskId={Number(id)} />
+          </CardContent>
+        </Card>
+
+        {/*ATTACHMENTS*/}
+        <Card className="border-slate-200">
+            <CardHeader>
+                <CardTitle className="text-base">Attachments</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <TaskAttachments taskId={Number(id)} />
+            </CardContent>
+        </Card>
+
+        {err && (
+          <p className="text-sm text-red-600 text-center">{err}</p>
         )}
-        </div>
       </div>
-
-      {/* Status + Delete */}
-      <p>
-        Status: <strong>{task.status}</strong>
-      </p>
-      <div
-        style={{
-          position: "fixed",
-          bottom: 56,
-          left: 0,
-          right: 0,
-          display: "flex",
-          gap: 8,
-          padding: 8,
-          background: "#fff",
-          borderTop: "1px solid #eee",
-        }}
-      >
-        <button disabled={pending==="status"} onClick={() =>
-          optimistic("status", d => ({ ...d, status: "in_progress" }),
-            () => api.patch(`/tasks/${id}`, { status: "in_progress" }))
-        }>Start</button>
-
-        <button disabled={pending==="status"} onClick={() =>
-          optimistic("status", d => ({ ...d, status: "awaiting_parts" }),
-            () => api.patch(`/tasks/${id}`, { status: "awaiting_parts" }))
-        }>Awaiting parts</button>
-
-        <button disabled={pending==="status"} onClick={() =>
-          optimistic("status", d => ({ ...d, status: "done" }),
-            () => api.patch(`/tasks/${id}`, { status: "done" }))
-        }>Done</button>
-        <div style={{ marginLeft: "auto" }}>
-          <button onClick={deleteTask} style={{ color: "#b91c1c" }}>
-            Delete Task
-          </button>
-        </div>
-      </div>
-
-      <Comments taskId={Number(id)} />
     </div>
   );
 }
 
-function isOverdue(t: { due_at?: string | null; status: string }) {
-  if (!t.due_at) return false;
-  if (t.status === "done" || t.status === "cancelled") return false;
-  return new Date(t.due_at).getTime() < Date.now();
+function isOverdue(task: { due_at?: string | null; status: string }) {
+  if (!task.due_at) return false;
+  if (task.status === "done" || task.status === "cancelled") return false;
+  return new Date(task.due_at).getTime() < Date.now();
 }
