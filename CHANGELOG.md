@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.4.0] - 2025-11-23
+### Added
+- **Task IO (Attachments + Comments)**
+  - `/api/tasks/{id}/attachments` upload, list, delete
+  - `/api/tasks/{id}/comments` add, list, delete
+  - New React components:
+    - `<TaskAttachments />`
+    - Updated `<Comments />` using service-layer logic
+  - Integrated into **Task Detail** page
+- **Service Layer Refactor**
+  - Added full `services/*` folder:
+    - `tasks.ts`, `task_io.ts`, `sites.ts`, `units.ts`, `inventory.ts`, `summary.ts`, `maintenance.ts`
+  - All pages updated to Axios-based services (no direct API calls inside components)
+  - Strong typing across all modules
+- **UI Consistency**
+  - Unified Tailwind v4 layout across pages
+  - Restored & completed UI kit: `Button`, `Card`, `Input`, `Label`, `Textarea`
+  - Modal system standardized
+- **Deployment**
+  - Backend & frontend fully working on **Google Cloud Run**
+  - Fixed Nginx proxy, Docker context, and missing build files
+
+### Changed
+- Rebuilt Sites, Units, Tasks, Inventory, Dashboard, Maintenance pages to use the new service architecture
+- Cleaned up leftover code from early prototype phase
+- Improved error handling and data refresh flows in Task Detail
+
+### Fixed
+- Missing exports between pages (e.g., CardDescription, getSite)
+- Vite/Tailwind black-screen issues
+- Task Detail crashes from undefined API bindings
+- Docker ignore rules causing missing `nginx.conf` during build
+
+### Notes
+- This completes the **v0.4.0 Ops Reliability** milestone.
+- Next: **v0.5.0 – Authentication, Roles, Activity Feed**, and more Task-level intelligence.
+
 ## [0.3.0] - 2025-10-21
 ### Added
 - **Dashboard**

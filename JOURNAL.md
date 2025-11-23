@@ -1,5 +1,24 @@
 # Project Journal
 
+## 2025-11-23 — v0.4.0 Complete 🎉
+The Ops Reliability milestone is now finished.
+
+Highlights:
+- Task IO (attachments + comments) finally lives end-to-end.
+- Service-layer architecture introduced, cleaning up every page.
+- Entire UI feels more stable and consistent after Tailwind v4 + UI kit recovery.
+- All modules now run smoothly on **Google Cloud Run** (frontend + backend).
+- Debugging journey uncovered several core stability improvements (Docker ignore rules, Nginx routing, FastAPI import cycles).
+
+Reflections:
+- This version transformed the codebase into something maintainable.
+- Service separation massively simplified components and eliminated silent breakages.
+- Task Detail is now a “complete” operational page with comments, attachments, status, assignee, due date, and delete.
+
+Next focus:
+- v0.5.0 → Authentication (JWT), user accounts, roles, and activity feed.
+- Start preparing for Postgres migration + Alembic for v1.0.0.
+
 ## 2025-10-21 — v0.3.0 Complete ✅
 - Dashboard online with real KPIs + overdue list.
 - Recurring maintenance engine wired end-to-end (preview + generate).

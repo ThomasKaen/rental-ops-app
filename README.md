@@ -5,22 +5,35 @@
 ---
 
 ## 🧭 Version
-- **v0.3.0 – Maintenance Flow (MVP Complete)**
-- Next: **v0.4.0 – Ops Reliability** (comments, attachments, digests, filters)
+- **v0.4.0 – Ops Reliability (complete)**
+- Previous: v0.3.0 – Maintenance Flow
+- Next: **v0.5.0 – Authentication & Activity Feed**
+
 
 ---
 
-## ✨ New in v0.3.0
-- **Dashboard:**  
-  `/api/summary` KPIs + `/api/summary/overdue` list
-- **Maintenance Scheduler:**  
-  `/api/maintenance/preview` and `/api/maintenance/materialize`
-- **Tasks:**  
-  Recurrence fields in New Task modal
-- **Unified API:**  
-  All endpoints under `/api/*` (Axios-only client)
-- **Infra:**  
-  Python 3.14 backend, Node 22 + Nginx proxy (`/api` → FastAPI)
+## ✨ New in v0.4.0
+- **Task IO (Attachments + Comments)**  
+  - Upload/download/delete attachments  
+  - Add/delete comments  
+  - New `<TaskAttachments />` + updated `<Comments />`  
+  - Fully integrated into Task Detail  
+- **Service Layer Architecture**  
+  - New `services/*` folder  
+  - All pages use Axios wrappers instead of inline fetch calls  
+  - Strong typing across all modules  
+- **UI Layer Stabilisation**  
+  - Restored missing UI components (CardHeader, CardDescription, etc.)  
+  - Clean Tailwind v4 setup  
+  - Uniform spacing, colors, and page structure  
+- **Cloud Deployment**  
+  - Backend & frontend now deployed on **Google Cloud Run**  
+  - Docker builds fixed (Nginx, ignore rules, dev artifacts)  
+  - Production builds fully functional
+
+This completes the **Ops reliability** goal for v0.4.0:  
+A fully functioning daily operations tool with stable data flow, comments, attachments, and consistent UI.
+
 ---
 
 ## 🧭 Project Structure
