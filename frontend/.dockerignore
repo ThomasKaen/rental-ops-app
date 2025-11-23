@@ -1,0 +1,22 @@
+# Prevent Windows node_modules from overwriting Linux ones
+node_modules
+
+# Ignore build output
+dist
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore cache / local tooling
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Ignore IDE junk
+.vscode
+.idea
+
+# Ignore repo stuff
+.git
+.gitignore

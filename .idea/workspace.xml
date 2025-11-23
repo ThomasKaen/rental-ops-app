@@ -4,8 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.4.0 - Vercel, fixing Network error">
-      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+    <list default="true" id="8fb9ba85-eff6-4150-9f94-a60b3a9efc52" name="Changes" comment="v0.4.0 - 0.5.0 roadmap">
+      <change afterPath="$PROJECT_DIR$/frontend/.dockerignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.env" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/backend/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/inventory.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/inventory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/maintenance.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/maintenance.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/task_io.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/task_io.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/routers/units.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/routers/units.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/nginx.conf" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/nginx.conf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/lib/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/lib/api.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -283,7 +295,23 @@
       <option name="project" value="LOCAL" />
       <updated>1762121376479</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="v0.4.0 - Finished. Documentation">
+      <option name="closed" value="true" />
+      <created>1763892494189</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1763892494189</updated>
+    </task>
+    <task id="LOCAL-00028" summary="v0.4.0 - 0.5.0 roadmap">
+      <option name="closed" value="true" />
+      <created>1763892635685</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1763892635685</updated>
+    </task>
+    <option name="localTasksCounter" value="29" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -305,6 +333,8 @@
     <MESSAGE value="v0.4.0 - live server setup" />
     <MESSAGE value="v0.4.0 - alembic setup" />
     <MESSAGE value="v0.4.0 - Vercel, fixing Network error" />
-    <option name="LAST_COMMIT_MESSAGE" value="v0.4.0 - Vercel, fixing Network error" />
+    <MESSAGE value="v0.4.0 - Finished. Documentation" />
+    <MESSAGE value="v0.4.0 - 0.5.0 roadmap" />
+    <option name="LAST_COMMIT_MESSAGE" value="v0.4.0 - 0.5.0 roadmap" />
   </component>
 </project>
