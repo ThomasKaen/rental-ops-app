@@ -1,41 +1,41 @@
 // src/services/units.ts
 import api from "../lib/api";
 
-export type Site = { id: number; name: string };
-
-export async function listSites(): Promise<Site[]> {
-  const res = await api.get<Site[]>("/sites/");
-  return res.data;
-}
-
-export type Unit = {
+export interface Unit {
   id: number;
   site_id: number;
   name: string;
   notes?: string | null;
-};
+}
 
 export async function listUnitsForSite(siteId: number): Promise<Unit[]> {
-  const res = await api.get<Unit[]>(`/sites/${siteId}/units/`);
-  return res.data;
+  return api.get<Unit[]>(`sites/${siteId}/units`);
 }
 
 export async function createUnit(
   siteId: number,
-  payload: Omit<Unit, "id" | "site_id">
+  data: { name: string; notes?: string | null }
 ): Promise<Unit> {
-  const res = await api.post<Unit>(`/sites/${siteId}/units/`, payload);
-  return res.data;
+  return api.post<Unit>(`sites/${siteId}/units`, data);
 }
 
 export async function updateUnit(
   id: number,
-  payload: Partial<Omit<Unit, "id" | "site_id">>
+  data: { name: string; notes?: string | null }
 ): Promise<Unit> {
-  const res = await api.put<Unit>(`/units/${id}`, payload);
-  return res.data;
+  return api.put<Unit>(`units/${id}`, data);
 }
 
 export async function deleteUnit(id: number): Promise<void> {
-  await api.delete(`/units/${id}`);
+  await api.delete(`units/${id}`);
+}
+
+export async function bulkCreateUnits(
+  siteId: number,
+  count: number
+): Promise<Unit[]> {
+  for (let i = 1; i <= count; i++) {
+    await createUnit(siteId, { name: `Unit ${i}` });
+  }
+  return listUnitsForSite(siteId);
 }

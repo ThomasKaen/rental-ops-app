@@ -5,8 +5,8 @@ export type Item = {
   id: number;
   sku: string;
   name: string;
-  category?: string | null;
   uom: string;
+  category?: string | null;
   notes?: string | null;
 };
 
@@ -19,62 +19,36 @@ export type Stock = {
   updated_at: string;
 };
 
-export type MovementReason =
-  | "usage"
-  | "delivery"
-  | "adjustment"
-  | "transfer";
+export type MovementReason = "usage" | "delivery" | "adjustment" | "transfer";
 
-// -------- Items --------
-
+// --- Items ---
 export async function listItems(): Promise<Item[]> {
-  const res = await api.get<Item[]>("/inventory/items");
-  return res.data;
+  return api.get<Item[]>("inventory/items");
 }
 
-export async function createItem(payload: Omit<Item, "id">): Promise<Item> {
-  const res = await api.post<Item>("/inventory/items", payload);
-  return res.data;
+export async function createItem(data: Partial<Item>): Promise<Item> {
+  return api.post<Item>("inventory/items", data);
 }
 
-export async function updateItem(
-  id: number,
-  payload: Partial<Omit<Item, "id">>
-): Promise<Item> {
-  const res = await api.put<Item>(`/inventory/items/${id}`, payload);
-  return res.data;
+export async function updateItem(id: number, data: Partial<Item>): Promise<Item> {
+  return api.put<Item>(`inventory/items/${id}`, data);
 }
 
-export async function deleteItem(id: number): Promise<void> {
-  await api.delete(`/inventory/items/${id}`);
+export async function deleteItemById(id: number): Promise<void> {
+  return api.delete(`inventory/items/${id}`);
 }
 
-// -------- Sites --------
-
-export type SiteRef = { id: number; name: string };
-
-export async function listInventorySites(): Promise<SiteRef[]> {
-  const res = await api.get<SiteRef[]>("/sites/");
-  return res.data;
-}
-
-// -------- Stock --------
-
-export async function getStockForSite(siteId: number): Promise<Stock[]> {
-  const res = await api.get<Stock[]>(`/inventory/stock?site_id=${siteId}`);
-  return res.data;
+// --- Stock ---
+export async function listStockForSite(siteId: number): Promise<Stock[]> {
+  return api.get<Stock[]>(`inventory/stock?site_id=${siteId}`);
 }
 
 export async function upsertStock(
   siteId: number,
   itemId: number,
-  qty: number
+  quantity: number
 ): Promise<void> {
-  await api.post("/inventory/stock/upsert", {
-    site_id: siteId,
-    item_id: itemId,
-    quantity: qty,
-  });
+  return api.post(`inventory/stock/upsert`, { site_id: siteId, item_id: itemId, quantity });
 }
 
 export async function moveStock(
@@ -83,7 +57,7 @@ export async function moveStock(
   reason: MovementReason,
   reference: string
 ): Promise<void> {
-  await api.post(`/inventory/stock/${stockId}/move`, {
+  return api.post(`inventory/stock/${stockId}/move`, {
     delta,
     reason,
     reference,

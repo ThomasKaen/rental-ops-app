@@ -1,23 +1,95 @@
-// Units.tsx — service-based rewrite
+// src/pages/Units.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import type React from "react";
 
+import { listSites, type Site } from "../services/sites";
 import {
-  listSites,
   listUnitsForSite,
   createUnit,
   updateUnit,
   deleteUnit,
-  type Site,
+  bulkCreateUnits,
   type Unit,
 } from "../services/units";
 
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Label } from "../components/ui/label";
+// ---- design tokens (same as before) ----
+const C = {
+  text: "#0f172a",
+  textSub: "#475569",
+  textMuted: "#64748b",
+  border: "#e2e8f0",
+  bgCard: "#ffffff",
+  bgPage: "#ffffff",
+  danger: "#b91c1c",
+  primary: "#1d4ed8",
+};
 
+const pageWrap: React.CSSProperties = {
+  maxWidth: 1000,
+  margin: "0 auto",
+  padding: "20px 16px 40px",
+};
+const h1Style: React.CSSProperties = {
+  margin: "6px 0 4px",
+  fontSize: 28,
+  fontWeight: 700,
+  color: C.text,
+};
+const pLead: React.CSSProperties = { margin: 0, color: C.textMuted };
+const toolbar: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  alignItems: "center",
+  marginTop: 16,
+  flexWrap: "wrap",
+};
+const btn: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: `1px solid ${C.border}`,
+  background: "#fff",
+  cursor: "pointer",
+};
+const btnPrimary: React.CSSProperties = {
+  ...btn,
+  background: C.primary,
+  color: "#fff",
+  borderColor: C.primary,
+};
+const btnDanger: React.CSSProperties = {
+  ...btn,
+  color: C.danger,
+  borderColor: "#fecaca",
+  background: "#fff5f5",
+};
+const input: React.CSSProperties = {
+  height: 36,
+  padding: "0 10px",
+  borderRadius: 8,
+  border: `1px solid ${C.border}`,
+  outline: "none",
+};
+const selectStyle: React.CSSProperties = { ...input, minWidth: 220 };
+const searchStyle: React.CSSProperties = { ...input, flex: 1, minWidth: 220 };
+const card: React.CSSProperties = {
+  border: `1px solid ${C.border}`,
+  borderRadius: 12,
+  background: C.bgCard,
+  padding: 14,
+  display: "grid",
+  gap: 6,
+};
+const rowTop: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 8,
+};
+const nameStyle: React.CSSProperties = { fontWeight: 600, color: C.text };
+const metaStyle: React.CSSProperties = { color: C.textMuted, fontSize: 12 };
+
+// ---- page ----
 export default function UnitsPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState<number | "">("");
@@ -26,23 +98,31 @@ export default function UnitsPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // modal state
   const [editing, setEditing] = useState<Partial<Unit> | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Unit | null>(null);
 
+  // query param and preselect on mount
   const [searchParams] = useSearchParams();
-
-  // Preselect site
   useEffect(() => {
     const sid = searchParams.get("site_id");
     if (sid) setSiteId(Number(sid));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load sites
+  // load sites once
   useEffect(() => {
-    listSites().then(setSites).catch(() => {});
+    (async () => {
+      try {
+        const r = await listSites();
+        setSites(r);
+      } catch {
+        /* ignore for now */
+      }
+    })();
   }, []);
 
-  // Load units for selected site
+  // load units when site changes
   useEffect(() => {
     (async () => {
       if (!siteId) {
@@ -52,8 +132,8 @@ export default function UnitsPage() {
       setLoading(true);
       setErr(null);
       try {
-        const data = await listUnitsForSite(siteId as number);
-        setUnits(data);
+        const r = await listUnitsForSite(siteId as number);
+        setUnits(r);
       } catch (e: any) {
         setErr(e?.message ?? "Failed to load units");
       } finally {
@@ -70,76 +150,75 @@ export default function UnitsPage() {
     );
   }, [q, units]);
 
+  // ---- CRUD ----
   const startNew = () => {
-    if (!siteId) return alert("Pick a site first.");
+    if (!siteId) {
+      alert("Pick a site first.");
+      return;
+    }
     setEditing({ site_id: siteId as number, name: "", notes: "" });
   };
-
   const startEdit = (u: Unit) => setEditing({ ...u });
 
   const bulkAdd = async () => {
-    if (!siteId) return alert("Pick a site first.");
-    const raw = prompt("How many units?");
+    if (!siteId) {
+      alert("Pick a site first.");
+      return;
+    }
+    const raw = prompt("How many units to create? (e.g., 3)");
     if (!raw) return;
     const n = Number(raw);
     if (!Number.isFinite(n) || n <= 0) return;
 
-    for (let i = 1; i <= n; i++) {
-      await createUnit(siteId as number, { name: `Unit ${i}`, notes: null });
-    }
-
-    const data = await listUnitsForSite(siteId as number);
-    setUnits(data);
+    const updated = await bulkCreateUnits(siteId as number, n);
+    setUnits(updated);
     alert(`Created ${n} units ✔`);
   };
 
   const saveUnit = async () => {
     if (!editing?.name?.trim() || !editing?.site_id) return;
-
     const payload = {
       name: editing.name!.trim(),
-      notes: editing.notes?.trim() || null,
+      notes: (editing.notes ?? "").toString().trim() || null,
     };
-
     if (editing.id) {
       await updateUnit(editing.id, payload);
     } else {
       await createUnit(editing.site_id, payload);
     }
-
     setEditing(null);
     if (siteId) {
-      const data = await listUnitsForSite(siteId as number);
-      setUnits(data);
+      const r = await listUnitsForSite(siteId as number);
+      setUnits(r);
     }
+    alert("Saved ✔");
   };
 
-  const handleDelete = async () => {
-    if (!confirmDelete) return;
-    await deleteUnit(confirmDelete.id);
+  const handleDeleteUnit = async (u: Unit) => {
+    if (!confirm(`Delete unit "${u.name}"?`)) return;
+    await deleteUnit(u.id);
     if (siteId) {
-      const data = await listUnitsForSite(siteId as number);
-      setUnits(data);
+      const r = await listUnitsForSite(siteId as number);
+      setUnits(r);
     }
-    setConfirmDelete(null);
+    alert("Deleted ✔");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
+    <div style={{ background: C.bgPage, minHeight: "100vh" }}>
+      <div style={pageWrap}>
+        <div>
+          <h1 style={h1Style}>Units</h1>
+          <p style={pLead}>View and manage units for each site.</p>
+        </div>
 
-        <header>
-          <h1 className="text-2xl font-semibold text-slate-900">Units</h1>
-          <p className="text-sm text-slate-500">Manage units belonging to sites.</p>
-        </header>
-
-        <div className="flex flex-wrap items-center gap-3">
+        <div style={toolbar}>
           <select
-            className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
             value={String(siteId)}
             onChange={(e) =>
               setSiteId(e.target.value ? Number(e.target.value) : "")
             }
+            style={selectStyle}
           >
             <option value="">Select site…</option>
             {sites.map((s) => (
@@ -149,132 +228,187 @@ export default function UnitsPage() {
             ))}
           </select>
 
-          <Input
-            placeholder="Search units"
-            className="h-9 flex-1 min-w-[200px]"
+          <input
+            placeholder="Search units (name or notes)…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            style={searchStyle}
             disabled={!siteId}
           />
 
-          <Button size="sm" onClick={startNew} disabled={!siteId}>
+          <button onClick={startNew} style={btnPrimary} disabled={!siteId}>
             + New Unit
-          </Button>
-
-          <Button variant="outline" size="sm" onClick={bulkAdd} disabled={!siteId}>
+          </button>
+          <button onClick={bulkAdd} style={btn}>
             Bulk Add
-          </Button>
+          </button>
 
-          {loading && <span className="text-xs text-slate-500">Loading…</span>}
-          {err && <span className="text-xs text-red-600">{err}</span>}
+          {loading && <span style={{ color: C.textMuted }}>Loading…</span>}
+          {err && <span style={{ color: C.danger }}>{err}</span>}
         </div>
 
         {!siteId && (
-          <p className="text-sm text-slate-500">Pick a site to see units.</p>
+          <div style={{ marginTop: 12, color: C.textMuted }}>
+            Pick a site to see its units.
+          </div>
         )}
 
         {siteId && (
-          <div className="grid gap-3">
+          <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
             {filtered.map((u) => (
-              <Card key={u.id} className="border-slate-200">
-                <CardHeader className="flex flex-row justify-between pb-2">
-                  <div>
-                    <CardTitle>{u.name}</CardTitle>
-                    <p className="text-xs text-slate-500">
-                      Unit ID: {u.id} • Site ID: {u.site_id}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => startEdit(u)}>
+              <div key={u.id} style={card}>
+                <div style={rowTop}>
+                  <div style={nameStyle}>{u.name}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => startEdit(u)} style={btn}>
                       Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-200 text-red-600"
+                    </button>
+                    <button
                       onClick={() => setConfirmDelete(u)}
+                      style={btnDanger}
                     >
                       Delete
-                    </Button>
+                    </button>
                   </div>
-                </CardHeader>
-
-                {u.notes && (
-                  <CardContent>
-                    <p className="text-sm text-slate-700">{u.notes}</p>
-                  </CardContent>
-                )}
-              </Card>
+                </div>
+                <div style={metaStyle}>
+                  Unit ID: {u.id} • Site ID: {u.site_id}
+                </div>
+                {u.notes && <div style={{ color: C.text }}>{u.notes}</div>}
+              </div>
             ))}
-
             {!loading && filtered.length === 0 && (
-              <p className="text-sm text-slate-500">No units found.</p>
+              <div style={{ color: C.textMuted }}>No units yet.</div>
             )}
           </div>
         )}
       </div>
 
-      {/* EDIT / CREATE MODAL */}
+      {/* create/edit modal */}
       {editing && (
-        <Modal title={editing.id ? "Edit Unit" : "New Unit"} onClose={() => setEditing(null)}>
-          <div className="space-y-3">
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={editing.name ?? ""}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s!, name: e.target.value }))
-                }
-              />
-            </div>
-
-            <div>
-              <Label>Notes</Label>
-              <Textarea
-                rows={4}
-                value={editing.notes ?? ""}
-                onChange={(e) =>
-                  setEditing((s) => ({ ...s!, notes: e.target.value }))
-                }
-              />
-            </div>
+        <Modal
+          title={editing.id ? "Edit Unit" : "New Unit"}
+          onClose={() => setEditing(null)}
+        >
+          <div style={{ display: "grid", gap: 10 }}>
+            <LabeledInput
+              label="Name"
+              value={editing.name ?? ""}
+              onChange={(v) => setEditing((s) => ({ ...s!, name: v }))}
+            />
+            <LabeledTextarea
+              label="Notes"
+              value={editing.notes ?? ""}
+              onChange={(v) => setEditing((s) => ({ ...s!, notes: v }))}
+              rows={4}
+            />
           </div>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              justifyContent: "flex-end",
+              marginTop: 14,
+            }}
+          >
+            <button onClick={() => setEditing(null)} style={btn}>
               Cancel
-            </Button>
-            <Button size="sm" onClick={saveUnit} disabled={!editing?.name?.trim()}>
+            </button>
+            <button
+              onClick={saveUnit}
+              style={btnPrimary}
+              disabled={!editing.name?.trim()}
+            >
               Save
-            </Button>
+            </button>
           </div>
         </Modal>
       )}
 
-      {/* DELETE CONFIRM */}
+      {/* delete confirm */}
       {confirmDelete && (
-        <Modal title="Delete Unit" onClose={() => setConfirmDelete(null)}>
-          <p className="text-sm text-slate-800">
-            Delete “{confirmDelete.name}”?
-          </p>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setConfirmDelete(null)}>
+        <Modal
+          title="Delete Unit"
+          onClose={() => setConfirmDelete(null)}
+        >
+          <div>Delete “{confirmDelete.name}”?</div>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              justifyContent: "flex-end",
+              marginTop: 14,
+            }}
+          >
+            <button onClick={() => setConfirmDelete(null)} style={btn}>
               Cancel
-            </Button>
-
-            <Button
-              size="sm"
-              className="bg-red-600 text-white"
-              onClick={handleDelete}
+            </button>
+            <button
+              onClick={() => {
+                handleDeleteUnit(confirmDelete);
+                setConfirmDelete(null);
+              }}
+              style={btnDanger}
             >
               Delete
-            </Button>
+            </button>
           </div>
         </Modal>
       )}
     </div>
+  );
+}
+
+// ---- tiny inputs + modal ----
+function LabeledInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label style={{ display: "grid", gap: 6 }}>
+      <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
+      <input
+        style={{ ...input, width: "100%" }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
+function LabeledTextarea({
+  label,
+  value,
+  onChange,
+  rows = 4,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows?: number;
+}) {
+  return (
+    <label style={{ display: "grid", gap: 6 }}>
+      <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
+      <textarea
+        rows={rows}
+        style={{
+          ...input,
+          minHeight: rows * 22,
+          paddingTop: 8,
+          paddingBottom: 8,
+          resize: "vertical",
+          width: "100%",
+        }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
   );
 }
 
@@ -288,13 +422,40 @@ function Modal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center px-4 z-50">
-      <div className="bg-white border border-slate-200 rounded-xl p-4 w-full max-w-lg shadow-xl">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-slate-900">{title}</h3>
-          <Button size="sm" variant="outline" onClick={onClose}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(2,6,23,.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          border: `1px solid ${C.border}`,
+          borderRadius: 14,
+          padding: 18,
+          width: "min(560px, 96vw)",
+          boxShadow: "0 10px 30px rgba(0,0,0,.12)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 18, color: C.text }}>{title}</h3>
+          <button onClick={onClose} style={{ ...btn, padding: "6px 10px" }}>
             Close
-          </Button>
+          </button>
         </div>
         {children}
       </div>

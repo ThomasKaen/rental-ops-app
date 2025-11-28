@@ -1,104 +1,67 @@
+// src/pages/SiteDetail.tsx
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { getSite, type Site } from "../services/sites";
+import { listUnitsForSite, type Unit } from "../services/units";
 
-import {
-  getSite,
-  type Site,
-} from "../services/sites";
-
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-
-export default function SiteDetail() {
+export default function SiteDetailPage() {
   const { id } = useParams();
+  const siteId = Number(id);
+
   const [site, setSite] = useState<Site | null>(null);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!siteId) return;
     (async () => {
       try {
-        const data = await getSite(Number(id));
-        setSite(data);
+        setLoading(true);
+        setErr(null);
+        const [s, u] = await Promise.all([
+          getSite(siteId),
+          listUnitsForSite(siteId),
+        ]);
+        setSite(s);
+        setUnits(u);
       } catch (e: any) {
-        setErr(
-          e?.response?.data?.detail ??
-            e?.message ??
-            "Failed to load site"
-        );
+        setErr(e?.message ?? "Failed to load site");
+      } finally {
+        setLoading(false);
       }
     })();
-  }, [id]);
+  }, [siteId]);
 
-  if (!site) {
-    return (
-      <div className="p-4 text-sm text-slate-500">
-        {err ?? "Loading…"}
-      </div>
-    );
+  if (!siteId) {
+    return <div>Missing site id.</div>;
   }
 
+  if (loading) return <div>Loading…</div>;
+  if (err) return <div style={{ color: "#b91c1c" }}>{err}</div>;
+  if (!site) return <div>Site not found.</div>;
+
   return (
-    <div className="min-h-screen bg-slate-50 p-4">
-      <div className="mx-auto max-w-4xl">
-        <Card className="border-slate-200">
-          <CardHeader className="flex flex-row justify-between items-center">
-            <div>
-              <CardTitle className="text-xl font-semibold text-slate-900">
-                {site.name}
-              </CardTitle>
-              <p className="text-sm text-slate-600">
-                Site ID: {site.id}
-              </p>
-            </div>
-            <Link to="/sites">
-              <Button variant="outline" size="sm">
-                ← Back
-              </Button>
-            </Link>
-          </CardHeader>
+    <div style={{ padding: 16, maxWidth: 800, margin: "0 auto" }}>
+      <Link to="/sites" style={{ fontSize: 14 }}>
+        ← Back to sites
+      </Link>
 
-          <CardContent className="space-y-4">
-            {site.address && (
-              <div>
-                <p className="text-xs text-slate-500 uppercase">
-                  Address
-                </p>
-                <p className="text-sm text-slate-800">{site.address}</p>
-              </div>
-            )}
+      <h1 style={{ fontSize: 28, margin: "12px 0" }}>{site.name}</h1>
+      <p style={{ margin: "4px 0" }}>
+        <strong>Address:</strong> {site.address || "—"}
+      </p>
+      {site.notes && <p style={{ margin: "4px 0" }}>{site.notes}</p>}
 
-            {site.notes && (
-              <div>
-                <p className="text-xs text-slate-500 uppercase">
-                  Notes
-                </p>
-                <p className="text-sm text-slate-800 whitespace-pre-line">
-                  {site.notes}
-                </p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-xs text-slate-500 uppercase">Units</p>
-              <p className="text-sm text-slate-800">
-                {site.units ?? "–"}
-              </p>
-            </div>
-
-            <Link to={`/units?site_id=${site.id}`}>
-              <Button className="mt-2" size="sm">
-                Manage Units →
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <h2 style={{ marginTop: 24, fontSize: 20 }}>Units</h2>
+      {units.length === 0 && <div>No units yet.</div>}
+      <ul>
+        {units.map((u) => (
+          <li key={u.id}>
+            {u.name} (id {u.id})
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

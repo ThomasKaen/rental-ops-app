@@ -12,6 +12,8 @@ export type KPI = {
 
 export type Summary = {
   kpis: KPI;
+  by_status: { status: string; count: number }[];
+  by_site: { site: string | null; cnt: number }[];
 };
 
 export type OverdueRow = {
@@ -24,17 +26,10 @@ export type OverdueRow = {
   unit: string | null;
 };
 
-export async function getSummaryAndOverdue(): Promise<{
-  summary: Summary;
-  overdue: OverdueRow[];
-}> {
-  const [sRes, oRes] = await Promise.all([
-    api.get<Summary>("/summary/"),
-    api.get<OverdueRow[]>("/summary/overdue/"),
-  ]);
+export async function getDashboardSummary(): Promise<Summary> {
+  return api.get<Summary>("summary");
+}
 
-  return {
-    summary: sRes.data,
-    overdue: oRes.data ?? [],
-  };
+export async function getOverdueTasks(): Promise<OverdueRow[]> {
+  return api.get<OverdueRow[]>("summary/overdue");
 }
